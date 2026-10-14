@@ -50,7 +50,7 @@ export const useChatStore = create<ChatState>()(
       threads: [],
       activeProjectId: defaultProject.id,
       activeThreadId: null,
-      intelligenceMode: "smart",
+      intelligenceMode: "fast",
 
       setIntelligenceMode: (intelligenceMode) => set({ intelligenceMode }),
 

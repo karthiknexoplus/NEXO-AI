@@ -143,30 +143,42 @@ async function handleIntelligenceChat(req, res) {
   const model = resolveModel(mode);
   const messages = Array.isArray(body.messages) ? body.messages : [];
 
+  const light = process.env.NEXO_LIGHT === "1" || process.env.NEXO_LIGHT === "true";
   const payload = {
     model,
     stream: true,
     temperature: mode === "fast" ? 0.15 : 0.22,
     keep_alive: "30m",
     options: {
-      num_ctx: mode === "deep" ? 12288 : 8192,
-      num_predict: mode === "fast" ? 1536 : 2048,
+      num_ctx: light
+        ? mode === "deep"
+          ? 4096
+          : 3072
+        : mode === "deep"
+          ? 8192
+          : mode === "fast"
+            ? 4096
+            : 6144,
+      num_predict: mode === "fast" ? 1024 : 1536,
+      num_thread: Number(process.env.OLLAMA_NUM_THREADS || 0) || undefined,
     },
     messages: [{ role: "system", content: SYSTEM_PROMPT }, ...messages],
   };
 
   const target = `${OLLAMA_HOST}/v1/chat/completions`;
+  const timeoutMs = Number(process.env.NEXO_OLLAMA_TIMEOUT_MS || 180000);
   const upstream = await fetch(target, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
     body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(timeoutMs),
   });
 
   if (!upstream.ok) {
     const text = await upstream.text();
     const friendly =
       upstream.status === 404 || text.toLowerCase().includes("not found")
-        ? "NEXOPLUS intelligence is still loading. Please try again in a moment."
+        ? "NEXOPLUS intelligence is still loading. Please try again in a moment (first run on a small server can take 1–2 minutes)."
         : "NEXOPLUS is temporarily unavailable. Please retry shortly.";
     return sendJson(res, 503, { error: friendly });
   }

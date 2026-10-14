@@ -1,9 +1,12 @@
 /** Server-only model routing — never expose raw model names to the browser. */
 
+/** Default llama3.2:3b fits 4 GB VPS (CPU-only). Override with NEXO_MODEL* env. */
+const DEFAULT_MODEL = process.env.NEXO_MODEL || "llama3.2:3b";
+
 const MODES = {
-  fast: process.env.NEXO_MODEL_FAST || process.env.NEXO_MODEL || "qwen2.5-coder",
-  smart: process.env.NEXO_MODEL || "qwen2.5-coder",
-  deep: process.env.NEXO_MODEL_DEEP || process.env.NEXO_MODEL || "qwen2.5-coder",
+  fast: process.env.NEXO_MODEL_FAST || DEFAULT_MODEL,
+  smart: process.env.NEXO_MODEL_SMART || DEFAULT_MODEL,
+  deep: process.env.NEXO_MODEL_DEEP || DEFAULT_MODEL,
 };
 
 export function resolveModel(mode) {

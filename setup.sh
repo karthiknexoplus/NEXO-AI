@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
-MODEL="${NEXO_MODEL:-qwen2.5-coder}"
+MODEL="${NEXO_MODEL:-llama3.2:3b}"
 PORT="${PORT:-3080}"
 
 run_as_root() {
