@@ -30,16 +30,26 @@
   --nexo-glow: rgba(53, 104, 240, 0.12);
 }
 
-html,
-body,
-#root {
+html {
   height: 100%;
   color: var(--nexo-fg);
 }
 
 body {
+  min-height: 100%;
+  height: 100%;
+  color: var(--nexo-fg);
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
     env(safe-area-inset-left);
+}
+
+body.nexo-studio-lock {
+  overflow: hidden;
+}
+
+#root {
+  height: 100%;
+  min-height: 100%;
 }
 
 @layer utilities {

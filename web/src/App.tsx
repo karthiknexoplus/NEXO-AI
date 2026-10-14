@@ -41,6 +41,11 @@ export default function App() {
   }, [theme]);
 
   useEffect(() => {
+    document.body.classList.toggle("nexo-studio-lock", signedIn);
+    return () => document.body.classList.remove("nexo-studio-lock");
+  }, [signedIn]);
+
+  useEffect(() => {
     void fetchAuthMe()
       .then((r) => {
         setSession(r.authenticated ? r : null);
