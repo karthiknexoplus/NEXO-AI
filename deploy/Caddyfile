@@ -1,6 +1,13 @@
 # HTTPS for ai.nexoplus.in → NEXOPLUS on localhost:3080
 # Install: see web/README.md (subdomain + Caddy)
 
+{
+	# Lets Encrypt account (optional but recommended)
+	# email admin@nexoplus.in
+	# Allow HTTP-01 on :80 until a cert exists (avoids redirect loop during first issue)
+	auto_https disable_redirects
+}
+
 ai.nexoplus.in {
 	reverse_proxy 127.0.0.1:3080
 }

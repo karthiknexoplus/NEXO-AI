@@ -99,6 +99,20 @@ Ensure `nexoplus-web` is running on **3080** (`systemctl status nexoplus-web`).
 
 Visit **https://ai.nexoplus.in** (Caddy obtains a Let’s Encrypt certificate automatically).
 
+If Let’s Encrypt fails with `tls: internal error`, Caddy may be redirecting HTTP→HTTPS before a cert exists. Reset and reload:
+
+```bash
+sudo cp ~/NEXO-AI/deploy/Caddyfile /etc/caddy/Caddyfile
+sudo systemctl stop caddy
+sudo rm -rf /var/lib/caddy/.local/share/caddy
+sudo systemctl start caddy
+sleep 15
+sudo journalctl -u caddy -n 20 --no-pager
+curl -sI https://ai.nexoplus.in | head -5
+```
+
+After HTTPS works, you may remove `auto_https disable_redirects` from the global block if you want `http://` to redirect to `https://`.
+
 ## Dev
 
 ```bash
