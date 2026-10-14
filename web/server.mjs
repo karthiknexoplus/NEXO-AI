@@ -206,7 +206,13 @@ function serveStatic(req, res, urlPath) {
     ".svg": "image/svg+xml",
     ".ico": "image/x-icon",
   };
-  res.writeHead(200, { "Content-Type": types[ext] || "application/octet-stream" });
+  const contentType = types[ext] || "application/octet-stream";
+  const stat = fs.statSync(filePath);
+  if (req.method === "HEAD") {
+    res.writeHead(200, { "Content-Type": contentType, "Content-Length": stat.size });
+    return res.end();
+  }
+  res.writeHead(200, { "Content-Type": contentType });
   fs.createReadStream(filePath).pipe(res);
 }
 
@@ -261,7 +267,11 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { ok: true, service: "nexoplus-web" });
     }
 
-    if (!API_ONLY && req.method === "GET" && fs.existsSync(DIST)) {
+    if (
+      !API_ONLY &&
+      (req.method === "GET" || req.method === "HEAD") &&
+      fs.existsSync(DIST)
+    ) {
       return serveStatic(req, res, pathname);
     }
 
