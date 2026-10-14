@@ -72,9 +72,7 @@ export async function streamIntelligenceChat(
         const parsed = JSON.parse(jsonStr) as {
           choices?: Array<{ delta?: { content?: string; reasoning?: string } }>;
         };
-        const token =
-          parsed.choices?.[0]?.delta?.content ??
-          parsed.choices?.[0]?.delta?.reasoning;
+        const token = parsed.choices?.[0]?.delta?.content;
         if (token) onToken(token);
       } catch {
         /* skip */
