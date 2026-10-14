@@ -1,4 +1,4 @@
-import { requireAuth } from "./authHttp.mjs";
+import { requireStudioAdmin } from "./authHttp.mjs";
 import {
   gitCommit,
   gitInit,
@@ -22,14 +22,14 @@ function authRemoteUrl(cloneUrl, token) {
 }
 
 export async function handleGitStatus(req, res, sendJson, workspaceRoot, projectId) {
-  if (!requireAuth(req, res, sendJson)) return;
+  if (!requireStudioAdmin(req, res, sendJson)) return;
   if (!projectId) return sendJson(res, 400, { error: "Missing projectId" });
   const status = await gitStatus(workspaceRoot, projectId);
   return sendJson(res, 200, status);
 }
 
 export async function handleGitInit(req, res, sendJson, workspaceRoot, readBody) {
-  if (!requireAuth(req, res, sendJson)) return;
+  if (!requireStudioAdmin(req, res, sendJson)) return;
   const raw = await readBody(req);
   let body = {};
   try {
@@ -43,7 +43,7 @@ export async function handleGitInit(req, res, sendJson, workspaceRoot, readBody)
 }
 
 export async function handleGitCommit(req, res, sendJson, workspaceRoot, readBody) {
-  if (!requireAuth(req, res, sendJson)) return;
+  if (!requireStudioAdmin(req, res, sendJson)) return;
   const raw = await readBody(req);
   let body = {};
   try {
@@ -57,7 +57,7 @@ export async function handleGitCommit(req, res, sendJson, workspaceRoot, readBod
 }
 
 export async function handleGitPush(req, res, sendJson, workspaceRoot, readBody) {
-  if (!requireAuth(req, res, sendJson)) return;
+  if (!requireStudioAdmin(req, res, sendJson)) return;
   const raw = await readBody(req);
   let body = {};
   try {
@@ -71,7 +71,7 @@ export async function handleGitPush(req, res, sendJson, workspaceRoot, readBody)
 }
 
 export async function handleGithubCreateRepo(req, res, sendJson, workspaceRoot, readBody) {
-  if (!requireAuth(req, res, sendJson)) return;
+  if (!requireStudioAdmin(req, res, sendJson)) return;
   const raw = await readBody(req);
   let body = {};
   try {

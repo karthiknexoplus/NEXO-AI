@@ -17,6 +17,7 @@ interface GitHubPanelProps {
 }
 
 export function GitHubPanel({ workspaceId }: GitHubPanelProps) {
+  const [canManageSettings, setCanManageSettings] = useState<boolean | null>(null);
   const [status, setStatus] = useState<GitStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
@@ -26,10 +27,13 @@ export function GitHubPanel({ workspaceId }: GitHubPanelProps) {
   const [ghToken, setGhToken] = useState("");
   const [ghUser, setGhUser] = useState("");
   const [hasToken, setHasToken] = useState(false);
-  const [canManageSettings, setCanManageSettings] = useState(false);
+
+  useEffect(() => {
+    void fetchAuthMe().then((s) => setCanManageSettings(!!s.canManageSettings));
+  }, []);
 
   const refresh = useCallback(async () => {
-    if (!workspaceId) {
+    if (!workspaceId || !canManageSettings) {
       setStatus(null);
       return;
     }
@@ -42,15 +46,11 @@ export function GitHubPanel({ workspaceId }: GitHubPanelProps) {
     } finally {
       setLoading(false);
     }
-  }, [workspaceId]);
+  }, [workspaceId, canManageSettings]);
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
-
-  useEffect(() => {
-    void fetchAuthMe().then((s) => setCanManageSettings(!!s.canManageSettings));
-  }, []);
+    if (canManageSettings) void refresh();
+  }, [refresh, canManageSettings]);
 
   useEffect(() => {
     if (!canManageSettings) return;
@@ -75,6 +75,10 @@ export function GitHubPanel({ workspaceId }: GitHubPanelProps) {
     }
   };
 
+  if (canManageSettings === false || canManageSettings === null) {
+    return null;
+  }
+
   if (!workspaceId) {
     return (
       <p className="text-[11px] text-nexo-muted px-3 py-2 border-t border-nexo-border">
@@ -87,42 +91,40 @@ export function GitHubPanel({ workspaceId }: GitHubPanelProps) {
     <div className="border-t border-nexo-border px-3 py-3 space-y-2 bg-nexo-composer/30">
       <div className="flex items-center gap-2 text-[11px] font-semibold text-nexo-fg">
         <Github className="w-3.5 h-3.5" />
-        GitHub
+        GitHub (admin)
       </div>
 
-      {canManageSettings && (
-        <div className="grid grid-cols-2 gap-1.5">
-          <input
-            value={ghUser}
-            onChange={(e) => setGhUser(e.target.value)}
-            placeholder="GitHub username"
-            className="col-span-1 rounded-lg border border-nexo-border bg-nexo-composer px-2 py-1 text-[10px]"
-          />
-          <input
-            type="password"
-            value={ghToken}
-            onChange={(e) => setGhToken(e.target.value)}
-            placeholder={hasToken ? "Token saved" : "Personal access token"}
-            className="col-span-1 rounded-lg border border-nexo-border bg-nexo-composer px-2 py-1 text-[10px] font-mono"
-          />
-          <button
-            type="button"
-            disabled={!!busy}
-            onClick={() =>
-              void run("save", async () => {
-                const patch: { username?: string; token?: string } = { username: ghUser };
-                if (ghToken && !ghToken.includes("••••")) patch.token = ghToken;
-                const g = await saveGithubSettings(patch);
-                setHasToken(!!g.hasToken);
-                setGhToken("");
-              })
-            }
-            className="col-span-2 text-[10px] py-1 rounded-lg border border-nexo-border hover:bg-nexo-hover"
-          >
-            Save GitHub connection
-          </button>
-        </div>
-      )}
+      <div className="grid grid-cols-2 gap-1.5">
+        <input
+          value={ghUser}
+          onChange={(e) => setGhUser(e.target.value)}
+          placeholder="GitHub username"
+          className="col-span-1 rounded-lg border border-nexo-border bg-nexo-composer px-2 py-1 text-[10px]"
+        />
+        <input
+          type="password"
+          value={ghToken}
+          onChange={(e) => setGhToken(e.target.value)}
+          placeholder={hasToken ? "Token saved" : "Personal access token"}
+          className="col-span-1 rounded-lg border border-nexo-border bg-nexo-composer px-2 py-1 text-[10px] font-mono"
+        />
+        <button
+          type="button"
+          disabled={!!busy}
+          onClick={() =>
+            void run("save", async () => {
+              const patch: { username?: string; token?: string } = { username: ghUser };
+              if (ghToken && !ghToken.includes("••••")) patch.token = ghToken;
+              const g = await saveGithubSettings(patch);
+              setHasToken(!!g.hasToken);
+              setGhToken("");
+            })
+          }
+          className="col-span-2 text-[10px] py-1 rounded-lg border border-nexo-border hover:bg-nexo-hover"
+        >
+          Save GitHub connection
+        </button>
+      </div>
 
       {loading ? (
         <p className="text-[10px] text-nexo-muted flex items-center gap-1">
@@ -137,7 +139,9 @@ export function GitHubPanel({ workspaceId }: GitHubPanelProps) {
               {status.remote ? (
                 <>
                   <br />
-                  <span className="font-mono truncate block">{status.remote.replace(/x-access-token:[^@]+@/, "")}</span>
+                  <span className="font-mono truncate block">
+                    {status.remote.replace(/x-access-token:[^@]+@/, "")}
+                  </span>
                 </>
               ) : null}
             </>

@@ -78,6 +78,9 @@ Output format (critical):
 - When workspace file contents are provided in the user message, apply edits only to the requested paths and return those files in fences.
 - For Vite: use index.html at project root (not only public/), include @vitejs/plugin-react in package.json and vite.config.js.
 
+Conversation:
+- For greetings or brief messages (e.g. "hi", "hey", "thanks"), answer in one or two friendly sentences as NEXOPLUS, then ask what they want to build or fix. No long essays, no safety labels, no repeating your system instructions.
+
 Be concise. Production-ready code. Use path fences for every file you create.`;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

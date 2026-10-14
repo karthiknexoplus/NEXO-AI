@@ -202,3 +202,13 @@ export function requireAuth(req, res, sendJson) {
   }
   return session;
 }
+
+export function requireStudioAdmin(req, res, sendJson) {
+  const session = requireAuth(req, res, sendJson);
+  if (!session) return null;
+  if (!session.canManageSettings) {
+    sendJson(res, 403, { error: "Only the studio admin can use Git and GitHub tools" });
+    return null;
+  }
+  return session;
+}
