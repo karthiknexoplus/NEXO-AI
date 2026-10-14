@@ -284,4 +284,9 @@ server.on("error", (err) => {
 
 server.listen(PORT, "0.0.0.0", () => {
   console.log(`NEXOPLUS ready → http://0.0.0.0:${PORT}`);
+  if (!API_ONLY && !fs.existsSync(DIST)) {
+    console.error(
+      `❌ web/dist is missing — UI will 404 until you run: cd web && npm run build`
+    );
+  }
 });
