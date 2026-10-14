@@ -34,42 +34,49 @@ export function Sidebar({ onBuildMyApp, onDownloadZip }: SidebarProps) {
   const projectThreads = threads.filter((t) => t.projectId === activeProjectId);
 
   return (
-    <aside className="w-[272px] shrink-0 h-full flex flex-col bg-nexo-sidebar border-r border-nexo-border transition-colors duration-300">
-      <div className="p-4 border-b border-nexo-border">
-        <img
-          src="/nexoplus-logo.png"
-          alt="NEXOPLUS Automations"
-          className="w-full rounded-lg object-contain max-h-[72px]"
-        />
-        <p className="text-[10px] text-center text-nexo-muted mt-2 tracking-wide uppercase">
-          Intelligent AI Studio
-        </p>
+    <aside className="w-[280px] shrink-0 h-full flex flex-col nexo-glass bg-nexo-sidebar border border-nexo-border rounded-2xl overflow-hidden shadow-sm transition-colors duration-300">
+      <div className="p-5 border-b border-nexo-border">
+        <div className="flex items-center gap-3">
+          <img
+            src="/nexoplus-logo.png"
+            alt="NEXOPLUS"
+            className="w-11 h-11 rounded-xl object-contain ring-1 ring-nexo-border"
+          />
+          <div className="min-w-0">
+            <p className="font-display font-semibold text-[15px] tracking-tight text-nexo-fg leading-tight">
+              NEXOPLUS
+            </p>
+            <p className="text-[10px] text-nexo-muted tracking-wide uppercase mt-0.5">
+              AI Studio
+            </p>
+          </div>
+        </div>
       </div>
 
-      <div className="px-2 pt-2 space-y-1">
+      <div className="px-3 pt-3 space-y-1.5">
         <button
           type="button"
           onClick={() => newThread()}
-          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[13px] font-medium bg-nexo-brand/15 text-nexo-fg hover:bg-nexo-brand/25 transition-all duration-200"
+          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-[13px] font-semibold nexo-btn-primary transition-all duration-200"
         >
-          <MessageSquarePlus className="w-4 h-4 text-nexo-brand" />
-          New Chat
+          <MessageSquarePlus className="w-4 h-4" />
+          New chat
         </button>
         <button
           type="button"
           onClick={onBuildMyApp}
-          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[13px] font-medium border border-nexo-brand/40 text-nexo-brand hover:bg-nexo-brand/10 transition-all"
+          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[13px] font-medium border border-nexo-border bg-nexo-composer/50 text-nexo-fg hover:bg-nexo-hover transition-all"
         >
-          <Rocket className="w-4 h-4" />
+          <Rocket className="w-4 h-4 text-nexo-brand" />
           Build my app
         </button>
         <button
           type="button"
           onClick={onDownloadZip}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-[13px] text-nexo-muted hover:bg-nexo-hover transition-colors"
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-[13px] text-nexo-muted hover:bg-nexo-hover hover:text-nexo-fg transition-colors"
         >
           <Download className="w-4 h-4" />
-          Download project ZIP
+          Download ZIP
         </button>
         <button
           type="button"
@@ -106,7 +113,7 @@ export function Sidebar({ onBuildMyApp, onDownloadZip }: SidebarProps) {
                 className={clsx(
                   "w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[13px] text-left transition-all duration-200",
                   p.id === activeProjectId
-                    ? "bg-nexo-hover text-nexo-fg"
+                    ? "bg-nexo-hover text-nexo-fg ring-1 ring-nexo-border"
                     : "text-nexo-muted hover:bg-nexo-hover/70"
                 )}
               >
@@ -132,7 +139,7 @@ export function Sidebar({ onBuildMyApp, onDownloadZip }: SidebarProps) {
                 className={clsx(
                   "flex-1 min-w-0 text-left px-2.5 py-2 rounded-lg text-[13px] transition-all duration-200 truncate",
                   t.id === activeThreadId
-                    ? "bg-nexo-hover text-nexo-fg"
+                    ? "bg-nexo-hover text-nexo-fg ring-1 ring-nexo-border"
                     : "text-nexo-muted hover:bg-nexo-hover/70"
                 )}
               >

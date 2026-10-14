@@ -79,11 +79,11 @@ export function BuildWizard({ open, onClose, onSubmit }: BuildWizardProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/55 backdrop-blur-sm animate-fade-in">
-      <div className="w-full max-w-lg rounded-2xl border border-nexo-border bg-nexo-sidebar shadow-2xl overflow-hidden">
+      <div className="w-full max-w-lg rounded-2xl border border-nexo-border nexo-glass bg-nexo-sidebar shadow-2xl overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-nexo-border">
           <div className="flex items-center gap-2">
             <Rocket className="w-5 h-5 text-nexo-brand" />
-            <h2 className="text-sm font-semibold">Build my app</h2>
+            <h2 className="font-display text-sm font-semibold">Build my app</h2>
           </div>
           <button type="button" onClick={onClose} className="p-1 rounded-md hover:bg-nexo-hover">
             <X className="w-4 h-4" />
@@ -188,7 +188,7 @@ export function BuildWizard({ open, onClose, onSubmit }: BuildWizardProps) {
               type="button"
               disabled={!canNext}
               onClick={() => setStep(step + 1)}
-              className="px-4 py-2 rounded-xl bg-nexo-brand text-white text-[12px] font-medium disabled:opacity-30"
+              className="px-4 py-2 rounded-xl nexo-btn-primary text-[12px] font-semibold disabled:opacity-30"
             >
               Continue
             </button>
@@ -196,7 +196,7 @@ export function BuildWizard({ open, onClose, onSubmit }: BuildWizardProps) {
             <button
               type="button"
               onClick={finish}
-              className="px-4 py-2 rounded-xl bg-nexo-brand text-white text-[12px] font-medium"
+              className="px-4 py-2 rounded-xl nexo-btn-primary text-[12px] font-semibold"
             >
               Generate with NEXOPLUS
             </button>

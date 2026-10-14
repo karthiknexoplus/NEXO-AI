@@ -1,5 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { clearProjectWorkspace } from "../lib/workspace";
+import { useUiStore } from "./uiStore";
 
 export interface Message {
   id: string;
@@ -121,7 +123,12 @@ export const useChatStore = create<ChatState>()(
           threads: s.threads.map((t) => (t.id === threadId ? { ...t, title } : t)),
         })),
 
-      deleteThread: (threadId) =>
+      deleteThread: (threadId) => {
+        const projectId = get().activeProjectId;
+        const wasLastInProject =
+          get().threads.filter((t) => t.projectId === projectId).length === 1 &&
+          get().threads.some((t) => t.id === threadId && t.projectId === projectId);
+
         set((s) => {
           const remaining = s.threads.filter((t) => t.id !== threadId);
           const inProject = remaining.filter((t) => t.projectId === s.activeProjectId);
@@ -130,7 +137,14 @@ export const useChatStore = create<ChatState>()(
             activeThreadId = inProject[0]?.id ?? null;
           }
           return { threads: remaining, activeThreadId };
-        }),
+        });
+
+        if (wasLastInProject) {
+          void clearProjectWorkspace(projectId).then(() => {
+            useUiStore.getState().bumpWorkspace();
+          });
+        }
+      },
     }),
     { name: "nexo-chat-v2" }
   )

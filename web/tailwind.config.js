@@ -5,15 +5,12 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: [
-          "-apple-system",
-          "BlinkMacSystemFont",
-          "Segoe UI",
-          "Inter",
-          "Helvetica Neue",
-          "Arial",
-          "sans-serif",
-        ],
+        sans: ["Inter", "system-ui", "sans-serif"],
+        display: ["Plus Jakarta Sans", "Inter", "system-ui", "sans-serif"],
+      },
+      borderRadius: {
+        "2xl": "1rem",
+        "3xl": "1.25rem",
       },
     },
   },

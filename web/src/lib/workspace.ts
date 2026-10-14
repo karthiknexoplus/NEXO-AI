@@ -15,6 +15,15 @@ export async function applyGeneratedFiles(
   return data.written ?? [];
 }
 
+export async function clearProjectWorkspace(projectId: string): Promise<void> {
+  const res = await fetch("/api/workspace/clear", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ projectId }),
+  });
+  if (!res.ok) throw new Error("Could not clear project files");
+}
+
 export async function listProjectFiles(projectId: string): Promise<string[]> {
   const res = await fetch(
     `/api/workspace/files?projectId=${encodeURIComponent(projectId)}`

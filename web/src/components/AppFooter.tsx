@@ -1,11 +1,12 @@
 export function AppFooter() {
   return (
-    <footer className="shrink-0 px-4 py-2 border-t border-nexo-border text-center">
+    <footer className="shrink-0 px-4 py-2 text-center">
       <p className="text-[10px] leading-relaxed text-nexo-muted">
-        <span className="text-nexo-brand font-medium">Beta</span> — NEXOPLUS intelligence is in
-        active testing; responses may take a little longer while we optimize.{" "}
-        <span className="text-nexo-fg/70">Built in Coimbatore with love</span> · NEXOPLUS
-        Automations
+        <span className="text-nexo-brand font-medium">Beta</span>
+        <span className="mx-1.5 opacity-40">·</span>
+        Built in Coimbatore with love
+        <span className="mx-1.5 opacity-40">·</span>
+        NEXOPLUS Automations
       </p>
     </footer>
   );

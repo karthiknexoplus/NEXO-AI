@@ -3,35 +3,51 @@
 @tailwind utilities;
 
 :root.dark {
-  --nexo-bg: #08080a;
-  --nexo-sidebar: #0c0c0f;
-  --nexo-panel: #0a0a0d;
-  --nexo-composer: #141418;
-  --nexo-border: rgba(255, 255, 255, 0.08);
-  --nexo-hover: rgba(255, 255, 255, 0.06);
-  --nexo-muted: #8b8b95;
-  --nexo-fg: #ececf1;
-  --nexo-brand: #2f5fd4;
+  --nexo-bg: #050508;
+  --nexo-sidebar: rgba(12, 12, 16, 0.72);
+  --nexo-panel: rgba(8, 8, 12, 0.55);
+  --nexo-composer: rgba(18, 18, 24, 0.85);
+  --nexo-border: rgba(255, 255, 255, 0.07);
+  --nexo-hover: rgba(255, 255, 255, 0.05);
+  --nexo-muted: #9494a8;
+  --nexo-fg: #f4f4f8;
+  --nexo-brand: #4d7cff;
+  --nexo-brand-2: #6b5cff;
+  --nexo-glow: rgba(77, 124, 255, 0.15);
 }
 
 :root.light {
-  --nexo-bg: #f4f6fb;
-  --nexo-sidebar: #ffffff;
-  --nexo-panel: #f8f9fc;
-  --nexo-composer: #ffffff;
-  --nexo-border: rgba(15, 23, 42, 0.1);
-  --nexo-hover: rgba(47, 95, 212, 0.08);
+  --nexo-bg: #eef1f8;
+  --nexo-sidebar: rgba(255, 255, 255, 0.82);
+  --nexo-panel: rgba(255, 255, 255, 0.45);
+  --nexo-composer: rgba(255, 255, 255, 0.92);
+  --nexo-border: rgba(15, 23, 42, 0.08);
+  --nexo-hover: rgba(47, 95, 212, 0.06);
   --nexo-muted: #64748b;
   --nexo-fg: #0f172a;
-  --nexo-brand: #2f5fd4;
+  --nexo-brand: #3568f0;
+  --nexo-brand-2: #5b4fe8;
+  --nexo-glow: rgba(53, 104, 240, 0.12);
 }
 
 html,
 body,
 #root {
   height: 100%;
-  background: var(--nexo-bg);
   color: var(--nexo-fg);
+}
+
+.nexo-app-bg {
+  background-color: var(--nexo-bg);
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -20%, var(--nexo-glow), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 0%, color-mix(in srgb, var(--nexo-brand-2) 12%, transparent), transparent),
+    radial-gradient(ellipse 50% 30% at 0% 100%, color-mix(in srgb, var(--nexo-brand) 8%, transparent), transparent);
+}
+
+.nexo-glass {
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
 }
 
 * {
@@ -50,14 +66,14 @@ body,
 
 @layer utilities {
   .animate-fade-in {
-    animation: fadeIn 0.35s ease-out both;
+    animation: fadeIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 }
 
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -69,16 +85,51 @@ body,
 .bg-nexo-panel { background: var(--nexo-panel); }
 .bg-nexo-composer { background: var(--nexo-composer); }
 .bg-nexo-hover { background: var(--nexo-hover); }
-.bg-nexo-brand { background: var(--nexo-brand); }
 .border-nexo-border { border-color: var(--nexo-border); }
+.ring-nexo-border { --tw-ring-color: var(--nexo-border); }
 .text-nexo-fg { color: var(--nexo-fg); }
 .text-nexo-muted { color: var(--nexo-muted); }
 .text-nexo-brand { color: var(--nexo-brand); }
-.ring-nexo-brand\/35 { --tw-ring-color: color-mix(in srgb, var(--nexo-brand) 35%, transparent); }
+
+.nexo-gradient-text {
+  background: linear-gradient(135deg, var(--nexo-fg) 0%, var(--nexo-brand) 55%, var(--nexo-brand-2) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.nexo-btn-primary {
+  background: linear-gradient(135deg, var(--nexo-brand) 0%, var(--nexo-brand-2) 100%);
+  color: #fff;
+  box-shadow: 0 4px 20px color-mix(in srgb, var(--nexo-brand) 35%, transparent);
+}
+
+.nexo-btn-primary:hover {
+  filter: brightness(1.06);
+  box-shadow: 0 6px 28px color-mix(in srgb, var(--nexo-brand) 45%, transparent);
+}
+
+.nexo-pill-active {
+  background: linear-gradient(135deg, var(--nexo-brand) 0%, var(--nexo-brand-2) 100%);
+  color: #fff;
+  box-shadow: 0 2px 12px color-mix(in srgb, var(--nexo-brand) 30%, transparent);
+}
+
+.shadow-composer {
+  box-shadow:
+    0 0 0 1px var(--nexo-border),
+    0 20px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+:root.light .shadow-composer {
+  box-shadow:
+    0 0 0 1px var(--nexo-border),
+    0 20px 50px -12px rgba(15, 23, 42, 0.12);
+}
 
 .prose-chat {
   font-size: 14px;
-  line-height: 1.65;
+  line-height: 1.7;
   color: var(--nexo-fg);
 }
 
@@ -96,17 +147,11 @@ body,
 }
 
 .prose-chat code {
-  font-family: Menlo, Monaco, Consolas, monospace;
+  font-family: ui-monospace, Menlo, Monaco, Consolas, monospace;
 }
 
 .prose-chat :not(pre) > code {
   background: var(--nexo-hover);
   padding: 0.1rem 0.35rem;
   border-radius: 0.35rem;
-}
-
-.shadow-composer {
-  box-shadow:
-    0 0 0 1px var(--nexo-border),
-    0 12px 40px rgba(0, 0, 0, 0.12);
 }

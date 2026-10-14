@@ -23,6 +23,15 @@ function walkFiles(dir, base = "") {
   return files.sort();
 }
 
+export function handleClearProject(res, root, projectId) {
+  const dir = projectDir(root, projectId);
+  if (fs.existsSync(dir)) {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+  fs.mkdirSync(dir, { recursive: true });
+  return sendJson(res, 200, { ok: true, cleared: true });
+}
+
 export function handleListFiles(res, root, projectId) {
   const dir = projectDir(root, projectId);
   const files = walkFiles(dir);

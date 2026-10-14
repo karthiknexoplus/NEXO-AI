@@ -27,8 +27,8 @@ export default function App() {
   }, []);
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex-1 flex min-h-0 overflow-hidden">
+    <div className="h-full flex flex-col nexo-app-bg">
+      <div className="flex-1 flex min-h-0 overflow-hidden p-1.5 gap-1.5">
         <Sidebar
           onBuildMyApp={() => setWizardOpen(true)}
           onDownloadZip={() => downloadProjectZip(activeProjectId)}

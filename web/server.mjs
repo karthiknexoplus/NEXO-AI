@@ -11,6 +11,7 @@ import {
 } from "./server/cloudProvider.mjs";
 import { publicModes, resolveModel } from "./server/models.mjs";
 import {
+  handleClearProject,
   handleDownloadZip,
   handleListFiles,
   handleReadFile,
@@ -289,6 +290,17 @@ const server = http.createServer(async (req, res) => {
     }
     if (pathname === "/api/workspace/apply" && req.method === "POST") {
       return handleWorkspaceApply(req, res);
+    }
+    if (pathname === "/api/workspace/clear" && req.method === "POST") {
+      const raw = await readBody(req);
+      let projectId = "default";
+      try {
+        const body = JSON.parse(raw || "{}");
+        if (body.projectId) projectId = body.projectId;
+      } catch {
+        /* default */
+      }
+      return handleClearProject(res, WORKSPACE_ROOT, projectId);
     }
     if (pathname === "/api/workspace/files" && req.method === "GET") {
       return handleListFiles(res, WORKSPACE_ROOT, url.searchParams.get("projectId"));

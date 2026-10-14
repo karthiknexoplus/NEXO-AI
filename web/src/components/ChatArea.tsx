@@ -109,12 +109,12 @@ export function ChatArea({ modes }: ChatAreaProps) {
   };
 
   return (
-    <main className="flex-1 flex flex-col min-w-0 bg-nexo-panel transition-colors duration-300">
-      <header className="h-12 shrink-0 flex items-center justify-between px-5 border-b border-nexo-border gap-3">
-        <h1 className="text-[13px] font-medium text-nexo-muted truncate min-w-0">
-          {thread?.title ?? "NEXOPLUS Chat"}
+    <main className="flex-1 flex flex-col min-w-0 nexo-glass bg-nexo-panel border border-nexo-border rounded-2xl overflow-hidden transition-colors duration-300">
+      <header className="h-14 shrink-0 flex items-center justify-between px-6 border-b border-nexo-border gap-3">
+        <h1 className="font-display text-[14px] font-semibold text-nexo-fg truncate min-w-0 tracking-tight">
+          {thread?.title ?? "Workspace"}
         </h1>
-        <div className="flex items-center gap-1 p-0.5 rounded-xl bg-nexo-composer border border-nexo-border shrink-0">
+        <div className="flex items-center gap-0.5 p-1 rounded-xl bg-nexo-composer/80 border border-nexo-border shrink-0">
           {modes.map((m) => (
             <button
               key={m.id}
@@ -122,9 +122,9 @@ export function ChatArea({ modes }: ChatAreaProps) {
               title={m.hint}
               onClick={() => setIntelligenceMode(m.id as IntelligenceMode)}
               className={clsx(
-                "px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all duration-200",
+                "px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all duration-200",
                 intelligenceMode === m.id
-                  ? "bg-nexo-brand text-white shadow-sm"
+                  ? "nexo-pill-active"
                   : "text-nexo-muted hover:text-nexo-fg hover:bg-nexo-hover"
               )}
             >
@@ -143,23 +143,17 @@ export function ChatArea({ modes }: ChatAreaProps) {
       <div className="flex-1 overflow-y-auto scroll-smooth">
         <div className="max-w-3xl mx-auto px-6 py-8 w-full">
           {!thread?.messages.length && (
-            <div className="pt-12 pb-8 text-center animate-fade-in">
-              <img
-                src="/nexoplus-logo.png"
-                alt=""
-                className="w-48 mx-auto rounded-xl mb-6 opacity-95"
-              />
-              <h2 className="text-2xl font-semibold tracking-tight mb-2">
+            <div className="pt-16 pb-10 text-center animate-fade-in">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium border border-nexo-border bg-nexo-composer/60 text-nexo-muted mb-6">
+                {activeMode?.label ?? "NEXOPLUS Smart"}
+              </span>
+              <h2 className="font-display text-3xl sm:text-4xl font-bold tracking-tight mb-3 nexo-gradient-text">
                 What should we build?
               </h2>
-              <p className="text-nexo-muted text-[14px] max-w-md mx-auto">
-                NEXOPLUS intelligence drafts and writes files for you automatically — powered by
-                our in-house automation stack.
+              <p className="text-nexo-muted text-[15px] max-w-md mx-auto leading-relaxed">
+                Describe your idea — get instant answers, code, and downloadable project files.
               </p>
-              <p className="text-[11px] text-nexo-muted mt-2">
-                Mode: <span className="text-nexo-fg">{activeMode?.label}</span>
-              </p>
-              <div className="grid gap-2 mt-8 max-w-lg mx-auto text-left">
+              <div className="grid gap-2.5 mt-10 max-w-lg mx-auto text-left">
                 {[
                   "Build a todo API — create all files for a Node backend",
                   "Scaffold a modern landing page with HTML, CSS, and JS",
@@ -168,7 +162,7 @@ export function ChatArea({ modes }: ChatAreaProps) {
                     key={hint}
                     type="button"
                     onClick={() => setInput(hint)}
-                    className="text-[13px] text-left px-4 py-3 rounded-xl border border-nexo-border bg-nexo-composer/40 hover:bg-nexo-hover transition-all duration-200 text-nexo-muted hover:text-nexo-fg"
+                    className="text-[13px] text-left px-4 py-3.5 rounded-2xl border border-nexo-border bg-nexo-composer/50 hover:border-nexo-brand/30 hover:bg-nexo-hover transition-all duration-200 text-nexo-muted hover:text-nexo-fg shadow-sm"
                   >
                     {hint}
                   </button>
@@ -182,13 +176,13 @@ export function ChatArea({ modes }: ChatAreaProps) {
               <article key={m.id} className="animate-fade-in">
                 {m.role === "user" ? (
                   <div className="flex justify-end">
-                    <div className="max-w-[85%] rounded-2xl px-4 py-2.5 bg-nexo-composer border border-nexo-border text-[14px] leading-relaxed shadow-sm">
+                    <div className="max-w-[85%] rounded-2xl rounded-br-md px-4 py-2.5 bg-nexo-composer border border-nexo-border text-[14px] leading-relaxed shadow-sm ring-1 ring-[color-mix(in_srgb,var(--nexo-brand)_12%,transparent)]">
                       {m.content}
                     </div>
                   </div>
                 ) : (
                   <div className="flex gap-3">
-                    <div className="w-7 h-7 shrink-0 rounded-lg bg-nexo-brand text-white text-[11px] font-bold flex items-center justify-center mt-0.5">
+                    <div className="w-8 h-8 shrink-0 rounded-xl nexo-btn-primary text-[11px] font-bold flex items-center justify-center mt-0.5 shadow-sm">
                       N+
                     </div>
                     <div className="prose-chat flex-1 min-w-0">
@@ -210,12 +204,12 @@ export function ChatArea({ modes }: ChatAreaProps) {
         </div>
       </div>
 
-      <div className="shrink-0 p-4 pb-2">
+      <div className="shrink-0 p-5 pb-3">
         <div className="max-w-3xl mx-auto">
           <div
             className={clsx(
-              "rounded-2xl border border-nexo-border bg-nexo-composer shadow-composer transition-all duration-300",
-              "focus-within:ring-2 focus-within:ring-nexo-brand/35 focus-within:border-nexo-brand/40"
+              "rounded-2xl border border-nexo-border bg-nexo-composer/90 nexo-glass shadow-composer transition-all duration-300",
+              "focus-within:ring-2 focus-within:ring-[color-mix(in_srgb,var(--nexo-brand)_35%,transparent)] focus-within:border-[color-mix(in_srgb,var(--nexo-brand)_40%,transparent)]"
             )}
           >
             <textarea
@@ -240,7 +234,7 @@ export function ChatArea({ modes }: ChatAreaProps) {
                 type="button"
                 onClick={() => void send()}
                 disabled={sending || !input.trim()}
-                className="w-9 h-9 rounded-xl bg-nexo-brand text-white flex items-center justify-center disabled:opacity-30 hover:scale-105 active:scale-95 transition-transform duration-150"
+                className="w-9 h-9 rounded-xl nexo-btn-primary flex items-center justify-center disabled:opacity-30 hover:scale-105 active:scale-95 transition-transform duration-150"
               >
                 {sending ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
