@@ -1,0 +1,6 @@
+# HTTPS for ai.nexoplus.in → NEXOPLUS on localhost:3080
+# Install: see web/README.md (subdomain + Caddy)
+
+ai.nexoplus.in {
+	reverse_proxy 127.0.0.1:3080
+}

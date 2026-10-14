@@ -63,6 +63,42 @@ sudo journalctl -u nexoplus-web -f
 
 Stop the foreground `./setup.sh` server first if it is still running on 3080, then use systemd.
 
+## Subdomain (e.g. `ai.nexoplus.in`) while main site stays on Netlify
+
+Yes — **only the subdomain** points to your VPS. **`nexoplus.in` / `www` can keep using Netlify** unchanged.
+
+### 1. DNS (Netlify)
+
+In **Netlify** → your team → **Domains** → **nexoplus.in** → **DNS records** (or your registrar if DNS is not on Netlify):
+
+| Type | Name | Value |
+|------|------|--------|
+| **A** | `ai` | `51.68.205.225` (your AICCloud VPS IP) |
+
+Do **not** change apex/`www` records that point to Netlify. Wait 5–30 minutes for DNS to propagate. Check: `dig +short ai.nexoplus.in` should show your VPS IP.
+
+### 2. VPS firewall (AICCloud)
+
+Open **TCP 80** and **443** (standard HTTPS). You can keep NEXOPLUS on **3080** internally; Caddy listens on 80/443.
+
+### 3. Caddy on the VPS (free HTTPS)
+
+```bash
+sudo apt-get update && sudo apt-get install -y debian-keyring debian-archive-keyring apt-transport-https curl
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+sudo apt-get update && sudo apt-get install -y caddy
+
+sudo cp ~/NEXO-AI/deploy/Caddyfile /etc/caddy/Caddyfile
+# Edit domain if needed: sudo nano /etc/caddy/Caddyfile
+sudo systemctl enable --now caddy
+sudo systemctl reload caddy
+```
+
+Ensure `nexoplus-web` is running on **3080** (`systemctl status nexoplus-web`).
+
+Visit **https://ai.nexoplus.in** (Caddy obtains a Let’s Encrypt certificate automatically).
+
 ## Dev
 
 ```bash
