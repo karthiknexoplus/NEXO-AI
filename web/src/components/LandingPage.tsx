@@ -94,12 +94,6 @@ export function LandingPage({ onAuthenticated }: LandingPageProps) {
     }
   };
 
-  const fillDemo = () => {
-    setTab("signin");
-    setEmail("karthik@nexoplus.in");
-    setPassword("Nexoplus@1234");
-  };
-
   return (
     <div className="min-h-full nexo-app-bg overflow-y-auto">
       <div className="min-h-full grid lg:grid-cols-2">
@@ -287,17 +281,6 @@ export function LandingPage({ onAuthenticated }: LandingPageProps) {
               >
                 Continue as guest
               </button>
-
-              <p className="mt-6 text-[11px] text-center text-nexo-muted leading-relaxed">
-                Team demo account?{" "}
-                <button
-                  type="button"
-                  onClick={fillDemo}
-                  className="text-nexo-brand hover:underline font-medium"
-                >
-                  Use default credentials
-                </button>
-              </p>
             </div>
           </div>
         </section>
