@@ -25,9 +25,9 @@ const CLOUD_MODELS = {
     deep: process.env.NEXO_CLOUD_MODEL_DEEP || "openrouter/free",
   },
   groq: {
-    fast: process.env.NEXO_CLOUD_MODEL_FAST || "llama-3.1-8b-instant",
-    smart: process.env.NEXO_CLOUD_MODEL_SMART || "llama-3.3-70b-versatile",
-    deep: process.env.NEXO_CLOUD_MODEL_DEEP || "llama-3.3-70b-versatile",
+    fast: process.env.NEXO_CLOUD_MODEL_FAST || "openai/gpt-oss-20b",
+    smart: process.env.NEXO_CLOUD_MODEL_SMART || "openai/gpt-oss-120b",
+    deep: process.env.NEXO_CLOUD_MODEL_DEEP || "openai/gpt-oss-120b",
   },
   custom: {
     fast: process.env.NEXO_CLOUD_MODEL_FAST || process.env.NEXO_MODEL || "gpt-4o-mini",

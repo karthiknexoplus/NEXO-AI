@@ -26,6 +26,36 @@ curl -s http://127.0.0.1:3080/api/health
 
 You can **stop Ollama** on a 4 GB box when using cloud-only: `NEXO_OLLAMA_FALLBACK=false` and `NEXO_INTELLIGENCE_PROVIDER=openrouter`.
 
+### OpenRouter free router (no per-token cost, rate limits apply)
+
+```ini
+Environment=NEXO_CLOUD_MODEL_FAST=openrouter/free
+Environment=NEXO_CLOUD_MODEL_SMART=openrouter/free
+Environment=NEXO_CLOUD_MODEL_DEEP=openrouter/free
+```
+
+### Groq free tier (stable model IDs)
+
+```ini
+Environment=GROQ_API_KEY=gsk_...
+Environment=NEXO_INTELLIGENCE_PROVIDER=groq
+Environment=NEXO_CLOUD_MODEL_FAST=openai/gpt-oss-20b
+Environment=NEXO_CLOUD_MODEL_SMART=openai/gpt-oss-120b
+Environment=NEXO_CLOUD_MODEL_DEEP=openai/gpt-oss-120b
+```
+
+### Long replies / “Load failed” in the browser
+
+- Default cloud stream timeout is **300s** (`NEXO_CLOUD_TIMEOUT_MS`). Increase on the VPS if needed.
+- If Safari shows **Load failed**, the edge proxy in front of port **3080** may need a higher **read timeout** (ask your host).
+- Large scaffolds run in **multiple parts** automatically; you can also type **continue**.
+
+### Studio features
+
+- **Import folder** — sidebar uploads a local folder into the project workspace (skips `node_modules`, `.git`).
+- **Chat with workspace** — existing files are sent as context so you can ask to change a specific file.
+- **Download ZIP** — export the workspace.
+
 ## One command (Mac / Linux server)
 
 From repo root:

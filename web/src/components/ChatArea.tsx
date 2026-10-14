@@ -3,18 +3,11 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ArrowUp, Loader2 } from "lucide-react";
 import clsx from "clsx";
-import {
-  streamIntelligenceChat,
-  type IntelligenceMode,
-  type IntelligenceModeOption,
-} from "../lib/intelligence";
-import {
-  isFailedAssistantReply,
-  STUB_REPLY_MESSAGE,
-  stripAssistantLeaks,
-} from "../lib/sanitizeAssistant";
-import { labelForPhase, phaseFromStream } from "../lib/generationStatus";
-import { applyGeneratedFiles } from "../lib/workspace";
+import type { IntelligenceMode, IntelligenceModeOption } from "../lib/intelligence";
+import { labelForPhase } from "../lib/generationStatus";
+import { runChatGeneration } from "../lib/runChatGeneration";
+import { isFailedAssistantReply, STUB_REPLY_MESSAGE } from "../lib/sanitizeAssistant";
+import { buildWorkspaceContext, formatNetworkError } from "../lib/workspaceContext";
 import { useChatStore, type Message } from "../store/chatStore";
 import { useUiStore } from "../store/uiStore";
 
@@ -88,56 +81,48 @@ export function ChatArea({ modes }: ChatAreaProps) {
         .map((m) => ({ role: m.role, content: m.content })) ?? [];
 
     try {
-      const chatHistory = history.map((m) => ({
+      const workspaceCtx = await buildWorkspaceContext(activeProjectId, text);
+      const baseHistory = history.map((m) => ({
         role: m.role as "user" | "assistant",
         content: m.content,
       }));
+      const chatHistory = workspaceCtx
+        ? baseHistory.map((m, i) =>
+            i === baseHistory.length - 1 && m.role === "user"
+              ? {
+                  ...m,
+                  content: `${workspaceCtx}\n\nUser request:\n${m.content}`,
+                }
+              : m
+          )
+        : baseHistory;
 
-      const runStream = async (messages: typeof chatHistory) => {
-        let acc = "";
-        await streamIntelligenceChat(messages, intelligenceMode, (token) => {
-          acc += token;
-          const clean = stripAssistantLeaks(acc);
-          const { phase, detail } = phaseFromStream(clean);
+      const { content: acc, written } = await runChatGeneration({
+        mode: intelligenceMode,
+        projectId: activeProjectId,
+        userText: text,
+        chatHistory,
+        onToken: (clean, phase, detail) => {
           setGeneration(phase, detail);
           updateAssistant(threadId!, assistantId, clean);
-        });
-        return stripAssistantLeaks(acc);
-      };
+        },
+        onSaving: () => setGeneration("saving", null),
+      });
 
-      let acc = await runStream(chatHistory);
-      if (isFailedAssistantReply(acc)) {
-        acc = await runStream([
-          ...chatHistory,
-          {
-            role: "user",
-            content:
-              `${text}\n\nReply as NEXOPLUS: output every file using markdown path fences only (no tool_call or write(path= syntax). Example: \`\`\`calculator-app/package.json`,
-          },
-        ]);
-      }
-
-      if (isFailedAssistantReply(acc)) {
+      if (!acc.trim() || isFailedAssistantReply(acc)) {
         updateAssistant(threadId!, assistantId, STUB_REPLY_MESSAGE);
         return;
       }
 
       updateAssistant(threadId!, assistantId, acc);
 
-      try {
-        setGeneration("saving", null);
-        const written = await applyGeneratedFiles(acc, activeProjectId);
-        if (written.length > 0) {
-          bumpWorkspace();
-          setFileToast(
-            `Saved ${written.length} file(s) to your project workspace.`
-          );
-        }
-      } catch {
-        /* no files */
+      if (written.length > 0) {
+        bumpWorkspace();
+        setFileToast(`Saved ${written.length} file(s) to your project workspace.`);
       }
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Something went wrong.";
+      const raw = e instanceof Error ? e.message : "Something went wrong.";
+      const msg = formatNetworkError(raw);
       updateAssistant(threadId!, assistantId, msg);
     } finally {
       setSending(false);

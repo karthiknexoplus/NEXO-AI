@@ -35,11 +35,16 @@ export async function streamIntelligenceChat(
   mode: IntelligenceMode,
   onToken: (t: string) => void
 ): Promise<void> {
-  const res = await fetch("/api/intelligence/chat", {
+  let res: Response;
+  try {
+    res = await fetch("/api/intelligence/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
     body: JSON.stringify({ mode, messages }),
   });
+  } catch {
+    throw new Error("Load failed");
+  }
 
   if (!res.ok) {
     let message = "NEXOPLUS could not respond right now. Please try again.";

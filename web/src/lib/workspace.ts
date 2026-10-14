@@ -58,6 +58,41 @@ export async function saveProjectFile(
   if (!res.ok) throw new Error("Could not save file");
 }
 
+const IMPORT_SKIP = /(?:^|\/)(node_modules|\.git|dist|build|\.next)(?:\/|$)/;
+
+export async function importLocalFolder(
+  projectId: string,
+  fileList: FileList
+): Promise<string[]> {
+  const files: { path: string; content: string }[] = [];
+  for (let i = 0; i < fileList.length; i++) {
+    const file = fileList[i];
+    const rel =
+      (file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name;
+    const path = rel.replace(/\\/g, "/").replace(/^\.\//, "");
+    if (!path || IMPORT_SKIP.test(path)) continue;
+    if (file.size > 2 * 1024 * 1024) continue;
+    try {
+      files.push({ path, content: await file.text() });
+    } catch {
+      /* skip binary */
+    }
+  }
+  if (files.length === 0) throw new Error("No text files to import");
+
+  const res = await fetch("/api/workspace/import", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ projectId, files }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error || "Import failed");
+  }
+  const data = (await res.json()) as { written: string[] };
+  return data.written ?? [];
+}
+
 export function downloadProjectZip(projectId: string): void {
   const url = `/api/workspace/download?projectId=${encodeURIComponent(projectId)}`;
   const a = document.createElement("a");

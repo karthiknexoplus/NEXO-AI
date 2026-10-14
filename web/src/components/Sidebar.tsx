@@ -1,16 +1,19 @@
+import { useRef, useState } from "react";
 import {
   Download,
   FolderKanban,
+  FolderUp,
   MessageSquarePlus,
   Moon,
   Rocket,
-  Search,
   Sun,
   Trash2,
 } from "lucide-react";
 import clsx from "clsx";
+import { importLocalFolder } from "../lib/workspace";
 import { useChatStore } from "../store/chatStore";
 import { useThemeStore } from "../store/themeStore";
+import { useUiStore } from "../store/uiStore";
 
 interface SidebarProps {
   onBuildMyApp: () => void;
@@ -30,8 +33,27 @@ export function Sidebar({ onBuildMyApp, onDownloadZip }: SidebarProps) {
     deleteThread,
   } = useChatStore();
   const { theme, toggle } = useThemeStore();
+  const bumpWorkspace = useUiStore((s) => s.bumpWorkspace);
+  const folderInputRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
 
   const projectThreads = threads.filter((t) => t.projectId === activeProjectId);
+
+  const onImportFolder = async (list: FileList | null) => {
+    if (!list?.length) return;
+    setImporting(true);
+    try {
+      const written = await importLocalFolder(activeProjectId, list);
+      bumpWorkspace();
+      window.alert(`Imported ${written.length} file(s) into your workspace.`);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Import failed";
+      window.alert(msg);
+    } finally {
+      setImporting(false);
+      if (folderInputRef.current) folderInputRef.current.value = "";
+    }
+  };
 
   return (
     <aside className="w-[280px] shrink-0 h-full flex flex-col nexo-glass bg-nexo-sidebar border border-nexo-border rounded-2xl overflow-hidden shadow-sm transition-colors duration-300">
@@ -78,13 +100,25 @@ export function Sidebar({ onBuildMyApp, onDownloadZip }: SidebarProps) {
           <Download className="w-4 h-4" />
           Download ZIP
         </button>
+        <input
+          ref={folderInputRef}
+          type="file"
+          className="hidden"
+          multiple
+          // @ts-expect-error webkitdirectory for folder pick
+          webkitdirectory=""
+          directory=""
+          onChange={(e) => void onImportFolder(e.target.files)}
+        />
         <button
           type="button"
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-[13px] text-nexo-muted hover:bg-nexo-hover transition-colors opacity-60 cursor-not-allowed"
-          title="Coming soon"
+          disabled={importing}
+          onClick={() => folderInputRef.current?.click()}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-[13px] text-nexo-muted hover:bg-nexo-hover hover:text-nexo-fg transition-colors disabled:opacity-50"
+          title="Import a folder from your computer into the workspace"
         >
-          <Search className="w-4 h-4" />
-          Search chats
+          <FolderUp className="w-4 h-4" />
+          {importing ? "Importing…" : "Import folder"}
         </button>
       </div>
 

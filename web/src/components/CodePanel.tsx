@@ -52,14 +52,14 @@ export function CodePanel() {
   const [saving, setSaving] = useState(false);
 
   const refresh = useCallback(async () => {
-    if (!hasChatsInProject) {
+    const list = await listProjectFiles(projectId);
+    if (list.length === 0 && !hasChatsInProject) {
       setFiles([]);
       setActiveFile(null);
       setContent("");
       setDirty(false);
       return;
     }
-    const list = await listProjectFiles(projectId);
     setFiles(list);
     setActiveFile((cur) => {
       if (cur && list.includes(cur)) return cur;

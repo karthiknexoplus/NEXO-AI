@@ -20,7 +20,15 @@ export async function streamSanitizedSseToClient(res, upstream) {
   const reader = upstream.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  const keepalive = setInterval(() => {
+    try {
+      res.write(": keepalive\n\n");
+    } catch {
+      clearInterval(keepalive);
+    }
+  }, 12_000);
 
+  try {
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
@@ -61,6 +69,9 @@ export async function streamSanitizedSseToClient(res, upstream) {
         res.write(`${line}\n`);
       }
     }
+  }
+  } finally {
+    clearInterval(keepalive);
   }
 
   res.end();

@@ -5,7 +5,7 @@ export function labelForPhase(phase: GenerationPhase, detail: string | null): st
     case "thinking":
       return "Thinking…";
     case "drafting":
-      return "Drafting response…";
+      return detail?.startsWith("Part") ? `${detail} — drafting…` : "Drafting response…";
     case "files":
       return detail ? `Writing ${detail}…` : "Generating project files…";
     case "saving":

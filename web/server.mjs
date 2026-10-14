@@ -19,6 +19,7 @@ import { streamSanitizedSseToClient } from "./server/sanitizeStream.mjs";
 import {
   handleClearProject,
   handleDownloadZip,
+  handleImportFiles,
   handleListFiles,
   handleReadFile,
   handleWriteFile,
@@ -45,7 +46,8 @@ Output format (critical):
 ...full file contents...
 \`\`\`
 
-- Put a short friendly sentence before the fences, then output ALL files completely (no placeholders, no truncated tool blocks).
+- Put a short friendly sentence before the fences. For large projects output up to 4 files per message; the user can say "continue" for more.
+- When workspace file contents are provided in the user message, apply edits only to the requested paths and return those files in fences.
 - For Vite: use index.html at project root (not only public/), include @vitejs/plugin-react in package.json and vite.config.js.
 
 Be concise. Production-ready code. Use path fences for every file you create.`;
@@ -250,7 +252,7 @@ async function handleIntelligenceChat(req, res) {
   const messages = [{ role: "system", content: SYSTEM_PROMPT }, ...history];
 
   const backend = intelligenceBackend();
-  const timeoutMs = Number(process.env.NEXO_CLOUD_TIMEOUT_MS || 120000);
+  const timeoutMs = Number(process.env.NEXO_CLOUD_TIMEOUT_MS || 300000);
 
   let upstream;
   if (backend !== "ollama") {
@@ -334,6 +336,23 @@ const server = http.createServer(async (req, res) => {
     }
     if (pathname === "/api/workspace/apply" && req.method === "POST") {
       return handleWorkspaceApply(req, res);
+    }
+    if (pathname === "/api/workspace/import" && req.method === "POST") {
+      const raw = await readBody(req);
+      let body = {};
+      try {
+        body = JSON.parse(raw || "{}");
+      } catch {
+        return sendJson(res, 400, { error: "Invalid JSON" });
+      }
+      const files = Array.isArray(body.files) ? body.files : [];
+      return handleImportFiles(
+        res,
+        WORKSPACE_ROOT,
+        body.projectId,
+        files,
+        safeJoin
+      );
     }
     if (pathname === "/api/workspace/clear" && req.method === "POST") {
       const raw = await readBody(req);
