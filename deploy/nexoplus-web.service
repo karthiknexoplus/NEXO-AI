@@ -1,0 +1,19 @@
+[Unit]
+Description=NEXOPLUS Web Studio (NEXOPLUS Automations)
+Documentation=https://github.com/karthiknexoplus/NEXO-AI
+After=network-online.target ollama.service
+Wants=ollama.service
+
+[Service]
+Type=simple
+WorkingDirectory=@REPO_ROOT@/web
+Environment=PORT=3080
+Environment=OLLAMA_HOST=http://127.0.0.1:11434
+Environment=WORKSPACE_ROOT=@REPO_ROOT@/web/workspace
+ExecStart=/usr/bin/env node server.mjs
+Restart=on-failure
+RestartSec=5
+# Logs: journalctl -u nexoplus-web -f
+
+[Install]
+WantedBy=multi-user.target
