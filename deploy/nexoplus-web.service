@@ -10,9 +10,14 @@ WorkingDirectory=@REPO_ROOT@/web
 Environment=PORT=3080
 Environment=OLLAMA_HOST=http://127.0.0.1:11434
 Environment=WORKSPACE_ROOT=@REPO_ROOT@/web/workspace
+# Cloud (fast on 4GB VPS): set OPENROUTER_API_KEY or GROQ_API_KEY — see deploy/nexoplus-cloud.env.example
+# Environment=OPENROUTER_API_KEY=
+# Environment=NEXO_INTELLIGENCE_PROVIDER=openrouter
+# Local fallback (optional):
 Environment=NEXO_MODEL=llama3.2:3b
 Environment=NEXO_LIGHT=1
 Environment=OLLAMA_NUM_THREADS=2
+Environment=NEXO_OLLAMA_FALLBACK=true
 ExecStart=/usr/bin/env node server.mjs
 Restart=on-failure
 RestartSec=5

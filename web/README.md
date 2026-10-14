@@ -1,6 +1,30 @@
 # NEXOPLUS Web
 
-Cursor-style AI studio for **NEXOPLUS Automations** — local/cloud Ollama, auto file creation, dark/light theme.
+Cursor-style AI studio for **NEXOPLUS Automations** — cloud API or local Ollama, auto file creation, dark/light theme.
+
+## Fast chat on a small VPS (cloud API + optional Ollama fallback)
+
+**Local Ollama** is free to run but slow on a 4 GB CPU VPS. **Cloud APIs** are fast like ChatGPT-style apps but are **not unlimited free** — they offer **free tiers / rate limits** (OpenRouter `openrouter/free`, Groq free tier, etc.).
+
+On the server (keys never go to the browser):
+
+```bash
+sudo mkdir -p /etc/systemd/system/nexoplus-web.service.d
+sudo tee /etc/systemd/system/nexoplus-web.service.d/cloud.conf <<'EOF'
+[Service]
+Environment=OPENROUTER_API_KEY=sk-or-v1-YOUR_KEY
+Environment=NEXO_INTELLIGENCE_PROVIDER=openrouter
+Environment=NEXO_PUBLIC_URL=https://ai.nexoplus.in
+Environment=NEXO_OLLAMA_FALLBACK=true
+EOF
+sudo systemctl daemon-reload
+sudo systemctl restart nexoplus-web
+curl -s http://127.0.0.1:3080/api/health
+```
+
+`intelligence` should be `openrouter` (or `groq` if you set `GROQ_API_KEY`). See `deploy/nexoplus-cloud.env.example`.
+
+You can **stop Ollama** on a 4 GB box when using cloud-only: `NEXO_OLLAMA_FALLBACK=false` and `NEXO_INTELLIGENCE_PROVIDER=openrouter`.
 
 ## One command (Mac / Linux server)
 

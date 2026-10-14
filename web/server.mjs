@@ -3,6 +3,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { extractFilesFromMarkdown } from "./server/extractFiles.mjs";
+import {
+  cloudChatRequest,
+  intelligenceBackend,
+  ollamaFallbackEnabled,
+  resolveCloudModel,
+} from "./server/cloudProvider.mjs";
 import { publicModes, resolveModel } from "./server/models.mjs";
 import {
   handleDownloadZip,
@@ -130,19 +136,30 @@ async function handleWorkspaceApply(req, res) {
   sendJson(res, 200, { written, root: dir });
 }
 
-async function handleIntelligenceChat(req, res) {
-  const raw = await readBody(req);
-  let body = {};
-  try {
-    body = JSON.parse(raw || "{}");
-  } catch {
-    return sendJson(res, 400, { error: "Invalid request" });
+async function streamUpstreamToClient(res, upstream) {
+  if (!upstream.ok) {
+    const text = await upstream.text();
+    return { ok: false, status: upstream.status, text };
   }
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+  });
+  if (upstream.body) {
+    const reader = upstream.body.getReader();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      res.write(value);
+    }
+  }
+  res.end();
+  return { ok: true };
+}
 
-  const mode = body.mode || "smart";
+async function fetchOllamaChat(mode, messages) {
   const model = resolveModel(mode);
-  const messages = Array.isArray(body.messages) ? body.messages : [];
-
   const light = process.env.NEXO_LIGHT === "1" || process.env.NEXO_LIGHT === "true";
   const payload = {
     model,
@@ -162,42 +179,70 @@ async function handleIntelligenceChat(req, res) {
       num_predict: mode === "fast" ? 1024 : 1536,
       num_thread: Number(process.env.OLLAMA_NUM_THREADS || 0) || undefined,
     },
-    messages: [{ role: "system", content: SYSTEM_PROMPT }, ...messages],
+    messages,
   };
-
-  const target = `${OLLAMA_HOST}/v1/chat/completions`;
   const timeoutMs = Number(process.env.NEXO_OLLAMA_TIMEOUT_MS || 180000);
-  const upstream = await fetch(target, {
+  return fetch(`${OLLAMA_HOST}/v1/chat/completions`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
     body: JSON.stringify(payload),
     signal: AbortSignal.timeout(timeoutMs),
   });
+}
 
-  if (!upstream.ok) {
-    const text = await upstream.text();
-    const friendly =
-      upstream.status === 404 || text.toLowerCase().includes("not found")
-        ? "NEXOPLUS intelligence is still loading. Please try again in a moment (first run on a small server can take 1–2 minutes)."
-        : "NEXOPLUS is temporarily unavailable. Please retry shortly.";
-    return sendJson(res, 503, { error: friendly });
+async function handleIntelligenceChat(req, res) {
+  const raw = await readBody(req);
+  let body = {};
+  try {
+    body = JSON.parse(raw || "{}");
+  } catch {
+    return sendJson(res, 400, { error: "Invalid request" });
   }
 
-  res.writeHead(200, {
-    "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache",
-    Connection: "keep-alive",
-  });
+  const mode = body.mode || "smart";
+  const history = Array.isArray(body.messages) ? body.messages : [];
+  const messages = [{ role: "system", content: SYSTEM_PROMPT }, ...history];
 
-  if (upstream.body) {
-    const reader = upstream.body.getReader();
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      res.write(value);
+  const backend = intelligenceBackend();
+  const timeoutMs = Number(process.env.NEXO_CLOUD_TIMEOUT_MS || 120000);
+
+  let upstream;
+  if (backend !== "ollama") {
+    const model = resolveCloudModel(backend, mode);
+    const { url, headers, body: cloudBody } = cloudChatRequest(backend, model, messages, mode);
+    upstream = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(cloudBody),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    const streamed = await streamUpstreamToClient(res, upstream);
+    if (streamed.ok) return;
+    console.error(
+      "[nexoplus] cloud chat failed",
+      upstream.status,
+      (streamed.text || "").slice(0, 500)
+    );
+    if (!ollamaFallbackEnabled()) {
+      let hint = "Check OPENROUTER_API_KEY on the server and OpenRouter credits/limits.";
+      if (upstream.status === 401) hint = "Invalid OpenRouter API key — create a new key and update cloud.conf.";
+      if (upstream.status === 429) hint = "OpenRouter rate limit — wait a minute or switch to Fast mode.";
+      return sendJson(res, 503, { error: `NEXOPLUS cloud unavailable. ${hint}` });
     }
+    upstream = await fetchOllamaChat(mode, messages);
+  } else {
+    upstream = await fetchOllamaChat(mode, messages);
   }
-  res.end();
+
+  const streamed = await streamUpstreamToClient(res, upstream);
+  if (streamed.ok) return;
+
+  const text = streamed.text || "";
+  const friendly =
+    upstream.status === 404 || text.toLowerCase().includes("not found")
+      ? "NEXOPLUS intelligence is still loading. Please try again in a moment (first run on a small server can take 1–2 minutes)."
+      : "NEXOPLUS is temporarily unavailable. Please retry shortly.";
+  return sendJson(res, 503, { error: friendly });
 }
 
 function serveStatic(req, res, urlPath) {
@@ -276,7 +321,13 @@ const server = http.createServer(async (req, res) => {
       return handleDownloadZip(req, res, WORKSPACE_ROOT, url.searchParams.get("projectId"));
     }
     if (pathname === "/api/health") {
-      return sendJson(res, 200, { ok: true, service: "nexoplus-web" });
+      const backend = intelligenceBackend();
+      return sendJson(res, 200, {
+        ok: true,
+        service: "nexoplus-web",
+        intelligence: backend,
+        ollamaFallback: ollamaFallbackEnabled(),
+      });
     }
 
     if (
