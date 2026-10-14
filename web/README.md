@@ -34,6 +34,22 @@ Environment=NEXO_CLOUD_MODEL_SMART=openrouter/free
 Environment=NEXO_CLOUD_MODEL_DEEP=openrouter/free
 ```
 
+### OpenCode Zen (alongside OpenRouter / Groq)
+
+[OpenCode](https://opencode.ai) is a separate open-source **coding agent** (terminal/IDE). You do **not** embed their app inside NEXOPLUS, but you **can** use their **Zen API** as another cloud backend (same pattern as OpenRouter).
+
+1. Create an API key at [opencode.ai](https://opencode.ai/auth) (Zen billing applies — not the same as “free models” inside the OpenCode desktop app).
+2. Pick a model ID from `https://opencode.ai/zen/v1/models` that supports **chat/completions**.
+3. On the VPS:
+
+```ini
+Environment=OPENCODE_ZEN_API_KEY=your_zen_key
+Environment=NEXO_INTELLIGENCE_PROVIDER=opencode
+Environment=NEXO_CLOUD_MODEL_SMART=gpt-5.5
+```
+
+OpenRouter/Groq env vars can stay in the file commented out; only one `NEXO_INTELLIGENCE_PROVIDER` is active. Customers still see **NEXOPLUS Fast / Smart / Deep** in the UI.
+
 ### Groq free tier (stable model IDs)
 
 ```ini
