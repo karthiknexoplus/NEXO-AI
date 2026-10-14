@@ -1,0 +1,102 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --nexo-bg: var(--vscode-sideBar-background, #1e1e1e);
+  --nexo-bg-elevated: var(--vscode-editor-background, #252526);
+  --nexo-border: var(--vscode-widget-border, rgba(255, 255, 255, 0.08));
+  --nexo-fg: var(--vscode-foreground, #e4e4e7);
+  --nexo-fg-muted: var(--vscode-descriptionForeground, #9ca3af);
+  --nexo-input-bg: var(--vscode-input-background, #2d2d2d);
+  --nexo-accent: var(--vscode-button-background, #0078d4);
+  --nexo-accent-fg: var(--vscode-button-foreground, #ffffff);
+  --nexo-focus: var(--vscode-focusBorder, #007fd4);
+  --nexo-user-bubble: var(--vscode-input-background, #2a2a2e);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--nexo-bg);
+  color: var(--nexo-fg);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--vscode-scrollbarSlider-background, rgba(121, 121, 121, 0.4));
+  border-radius: 3px;
+}
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--nexo-bg);
+}
+
+.composer-shell {
+  background: linear-gradient(to top, var(--nexo-bg) 70%, transparent);
+}
+
+.composer-box {
+  border: 1px solid var(--nexo-border);
+  background: var(--nexo-bg-elevated);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.04),
+    0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.composer-box:focus-within {
+  border-color: var(--nexo-focus);
+  box-shadow: 0 0 0 1px var(--nexo-focus);
+}
+
+.prose-nexo {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--nexo-fg);
+}
+
+.prose-nexo p {
+  margin: 0.5em 0;
+}
+
+.prose-nexo code {
+  font-family: Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+}
+
+.hljs {
+  background: var(--vscode-textCodeBlock-background, #1a1a1a) !important;
+  padding: 0.75rem 1rem;
+  border-radius: 0.625rem;
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-x: auto;
+  border: 1px solid var(--nexo-border);
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.status-dot-live {
+  animation: pulse-dot 1.4s ease-in-out infinite;
+}

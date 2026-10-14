@@ -1,0 +1,197 @@
+{
+  "name": "cursor-clone",
+  "displayName": "Cursor Clone (NEXO AI)",
+  "description": "Cursor-style AI chat, inline edit, and ghost completions in VS Code",
+  "version": "0.1.0",
+  "publisher": "nexo-ai",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "AI",
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "cursor-clone.openChat",
+        "title": "Cursor Clone: Open Chat",
+        "category": "Cursor Clone"
+      },
+      {
+        "command": "cursor-clone.inlineEdit",
+        "title": "Cursor Clone: Inline Edit",
+        "category": "Cursor Clone"
+      },
+      {
+        "command": "cursor-clone.inlineEdit.accept",
+        "title": "Cursor Clone: Accept Inline Edit",
+        "category": "Cursor Clone"
+      },
+      {
+        "command": "cursor-clone.inlineEdit.reject",
+        "title": "Cursor Clone: Reject Inline Edit",
+        "category": "Cursor Clone"
+      },
+      {
+        "command": "cursor-clone.indexCodebase",
+        "title": "Cursor Clone: Index Codebase",
+        "category": "Cursor Clone"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "cursor-clone.inlineEdit",
+        "key": "ctrl+k",
+        "mac": "cmd+k",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "cursor-clone.openChat",
+        "key": "ctrl+shift+l",
+        "mac": "cmd+shift+l"
+      },
+      {
+        "command": "cursor-clone.inlineEdit.accept",
+        "key": "ctrl+enter",
+        "mac": "cmd+enter",
+        "when": "cursor-clone.inlineEditPreviewActive"
+      },
+      {
+        "command": "cursor-clone.inlineEdit.reject",
+        "key": "escape",
+        "when": "cursor-clone.inlineEditPreviewActive"
+      },
+      {
+        "command": "cursor-clone.inlineEdit.reject",
+        "key": "escape",
+        "when": "cursor-clone.inlineEditInputActive"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "cursor-clone",
+          "title": "Cursor Clone",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "cursor-clone": [
+        {
+          "type": "webview",
+          "id": "cursor-clone.chatView",
+          "name": "Chat"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Cursor Clone",
+      "properties": {
+        "cursor-clone.provider": {
+          "type": "string",
+          "default": "ollama",
+          "enum": [
+            "openrouter",
+            "ollama",
+            "custom"
+          ],
+          "description": "LLM provider backend"
+        },
+        "cursor-clone.openRouterApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "OpenRouter API key (or set OPENROUTER_API_KEY env var)"
+        },
+        "cursor-clone.openRouterModel": {
+          "type": "string",
+          "default": "openrouter/free",
+          "description": "OpenRouter model id"
+        },
+        "cursor-clone.ollamaBaseUrl": {
+          "type": "string",
+          "default": "http://localhost:11434",
+          "description": "Ollama API base URL"
+        },
+        "cursor-clone.ollamaModel": {
+          "type": "string",
+          "default": "qwen2.5-coder",
+          "description": "Ollama model name (e.g. qwen2.5-coder, deepseek-r1)"
+        },
+        "cursor-clone.customBaseUrl": {
+          "type": "string",
+          "default": "https://api.openai.com/v1",
+          "description": "Custom OpenAI-compatible API base URL"
+        },
+        "cursor-clone.customApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Custom API key"
+        },
+        "cursor-clone.customModel": {
+          "type": "string",
+          "default": "gpt-4o-mini",
+          "description": "Custom provider model id"
+        },
+        "cursor-clone.inlineCompletionEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable ghost-text inline completions"
+        },
+        "cursor-clone.embeddingProvider": {
+          "type": "string",
+          "default": "ollama",
+          "enum": ["openrouter", "ollama", "custom"],
+          "description": "Provider used for codebase embedding requests"
+        },
+        "cursor-clone.embeddingModel": {
+          "type": "string",
+          "default": "openai/text-embedding-3-small",
+          "description": "Embedding model id (OpenRouter / OpenAI-compatible)"
+        },
+        "cursor-clone.ollamaEmbeddingModel": {
+          "type": "string",
+          "default": "nomic-embed-text",
+          "description": "Ollama embedding model (when embeddingProvider is ollama)"
+        },
+        "cursor-clone.ragAutoIndex": {
+          "type": "boolean",
+          "default": false,
+          "description": "Index the workspace automatically on extension startup"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "node esbuild.config.js",
+    "watch": "node esbuild.config.js --watch",
+    "lint": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.2.1",
+    "autoprefixer": "^10.4.20",
+    "esbuild": "^0.24.0",
+    "esbuild-plugin-postcss2": "^0.1.2",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.14"
+  },
+  "dependencies": {
+    "highlight.js": "^11.10.0",
+    "ignore": "^6.0.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-markdown": "^9.0.1",
+    "remark-gfm": "^4.0.0",
+    "typescript": "^5.6.3"
+  }
+}

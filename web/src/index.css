@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+}
+
+.prose-chat {
+  @apply text-[14px] leading-relaxed text-cursor-fg;
+}
+
+.prose-chat p {
+  @apply my-2;
+}
+
+.prose-chat pre {
+  @apply my-3 rounded-xl border border-cursor-border bg-black/40 overflow-x-auto text-[13px];
+}
+
+.prose-chat code {
+  @apply font-mono text-[13px];
+}
+
+.prose-chat :not(pre) > code {
+  @apply bg-white/10 px-1.5 py-0.5 rounded;
+}
