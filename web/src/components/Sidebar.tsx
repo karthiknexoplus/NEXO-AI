@@ -107,11 +107,13 @@ export function Sidebar({
     <aside className="w-[280px] shrink-0 h-full flex flex-col nexo-glass bg-nexo-sidebar border border-nexo-border rounded-2xl overflow-hidden shadow-sm transition-colors duration-300">
       <div className="p-5 border-b border-nexo-border">
         <div className="flex items-center gap-3">
-          <img
-            src="/nexoplus-logo.png"
-            alt="NEXOPLUS"
-            className="w-11 h-11 rounded-xl object-contain ring-1 ring-nexo-border"
-          />
+          <div className="h-11 w-11 shrink-0 rounded-xl ring-1 ring-nexo-border bg-nexo-composer/50 flex items-center justify-center p-1.5 overflow-hidden">
+            <img
+              src="/nexoplus-logo.png"
+              alt="NEXOPLUS"
+              className="max-h-full max-w-full w-auto h-auto object-contain"
+            />
+          </div>
           <div className="min-w-0">
             <p className="font-display font-semibold text-[15px] tracking-tight text-nexo-fg leading-tight">
               NEXOPLUS

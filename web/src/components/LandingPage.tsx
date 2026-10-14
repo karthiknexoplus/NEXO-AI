@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Loader2, Sparkles } from "lucide-react";
+import { Code2, FolderOpen, Github, Loader2, Sparkles, Zap } from "lucide-react";
 import {
   fetchAuthConfig,
   login,
@@ -15,10 +15,10 @@ interface LandingPageProps {
   onAuthenticated: (session: AuthSession) => void;
 }
 
-const FEATURES = [
-  "Chat-native coding with per-chat project files",
-  "Import folders, edit in Monaco, ask NEXOPLUS to change code",
-  "Git commit, push, and create GitHub repos from the studio",
+const HIGHLIGHTS = [
+  { icon: Zap, title: "NEXOPLUS Fast · Smart · Deep", desc: "Modes tuned for drafts, builds, and deep work" },
+  { icon: FolderOpen, title: "Per-chat workspaces", desc: "Import folders, edit in Monaco, ask to change code" },
+  { icon: Github, title: "Ship to GitHub", desc: "Commit, push, and create repos from the studio" },
 ];
 
 export function LandingPage({ onAuthenticated }: LandingPageProps) {
@@ -58,8 +58,7 @@ export function LandingPage({ onAuthenticated }: LandingPageProps) {
     setBusy(true);
     setError(null);
     try {
-      const session = await login(email, password);
-      finish(session);
+      finish(await login(email, password));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Sign in failed");
     } finally {
@@ -72,8 +71,7 @@ export function LandingPage({ onAuthenticated }: LandingPageProps) {
     setBusy(true);
     setError(null);
     try {
-      const session = await register(email, password);
-      finish(session);
+      finish(await register(email, password));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Sign up failed");
     } finally {
@@ -85,8 +83,7 @@ export function LandingPage({ onAuthenticated }: LandingPageProps) {
     setBusy(true);
     setError(null);
     try {
-      const session = await loginAsGuest();
-      finish(session);
+      finish(await loginAsGuest());
     } catch {
       setError("Could not start guest session");
     } finally {
@@ -95,67 +92,101 @@ export function LandingPage({ onAuthenticated }: LandingPageProps) {
   };
 
   return (
-    <div className="min-h-full nexo-app-bg overflow-y-auto">
-      <div className="min-h-full grid lg:grid-cols-2">
-        <section
-          className="relative flex flex-col justify-between p-10 lg:p-14 border-b lg:border-b-0 lg:border-r border-nexo-border"
-          style={{
-            background:
-              "linear-gradient(145deg, color-mix(in srgb, var(--nexo-brand) 18%, var(--nexo-sidebar)) 0%, var(--nexo-panel) 55%, var(--nexo-app-bg) 100%)",
-          }}
-        >
-          <div>
-            <div className="flex items-center gap-3 mb-12">
-              <img
-                src="/nexoplus-logo.png"
-                alt="NEXOPLUS"
-                className="w-12 h-12 rounded-2xl ring-1 ring-nexo-border shadow-sm"
-              />
-              <div>
-                <p className="font-display text-xl font-bold tracking-tight text-nexo-fg">
-                  NEXOPLUS
-                </p>
-                <p className="text-[11px] uppercase tracking-[0.2em] text-nexo-muted">
-                  AI Studio
-                </p>
-              </div>
-            </div>
-            <h1 className="font-display text-4xl lg:text-5xl font-bold leading-[1.1] tracking-tight text-nexo-fg max-w-lg">
-              Build software with{" "}
-              <span className="nexo-gradient-text">intelligence built in.</span>
-            </h1>
-            <p className="mt-5 text-[15px] text-nexo-muted max-w-md leading-relaxed">
-              NEXOPLUS Automations — chat, generate projects, import your codebase, and ship to
-              GitHub from one modern studio.
-            </p>
-            <ul className="mt-10 space-y-3">
-              {FEATURES.map((f) => (
-                <li
-                  key={f}
-                  className="flex items-start gap-2.5 text-[13px] text-nexo-fg/90"
-                >
-                  <Sparkles className="w-4 h-4 text-nexo-brand shrink-0 mt-0.5" />
-                  {f}
-                </li>
-              ))}
-            </ul>
-          </div>
-          <p className="mt-12 text-[11px] text-nexo-muted">
-            © {new Date().getFullYear()} NEXOPLUS Automations · Coimbatore
-          </p>
-        </section>
+    <div className="h-dvh min-h-[600px] flex flex-col nexo-app-bg overflow-hidden relative">
+      <div
+        className="pointer-events-none absolute inset-0 opacity-40"
+        aria-hidden
+        style={{
+          backgroundImage: `
+            radial-gradient(circle at 20% 30%, color-mix(in srgb, var(--nexo-brand) 25%, transparent) 0%, transparent 45%),
+            radial-gradient(circle at 85% 70%, color-mix(in srgb, var(--nexo-brand-2) 20%, transparent) 0%, transparent 40%)
+          `,
+        }}
+      />
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.03] dark:opacity-[0.06]"
+        style={{
+          backgroundImage:
+            "linear-gradient(var(--nexo-border) 1px, transparent 1px), linear-gradient(90deg, var(--nexo-border) 1px, transparent 1px)",
+          backgroundSize: "48px 48px",
+        }}
+        aria-hidden
+      />
 
-        <section className="flex items-center justify-center p-8 lg:p-14">
-          <div className="w-full max-w-md">
-            <div className="nexo-glass bg-nexo-sidebar border border-nexo-border rounded-3xl shadow-lg p-8">
-              <h2 className="font-display text-2xl font-semibold text-nexo-fg text-center">
-                Welcome back
+      <header className="relative z-10 shrink-0 flex items-center justify-between px-6 lg:px-10 py-5 border-b border-nexo-border/60">
+        <div className="flex items-center gap-3">
+          <div className="h-11 w-11 shrink-0 rounded-xl ring-1 ring-nexo-border bg-nexo-composer/80 flex items-center justify-center overflow-hidden p-1.5">
+            <img
+              src="/nexoplus-logo.png"
+              alt=""
+              className="max-h-full max-w-full w-auto h-auto object-contain"
+            />
+          </div>
+          <div>
+            <p className="font-display text-[17px] font-bold tracking-tight text-nexo-fg leading-none">
+              NEXOPLUS
+            </p>
+            <p className="text-[10px] uppercase tracking-[0.22em] text-nexo-muted mt-0.5">
+              AI Studio
+            </p>
+          </div>
+        </div>
+        <p className="hidden sm:block text-[11px] text-nexo-muted">
+          NEXOPLUS Automations · Coimbatore
+        </p>
+      </header>
+
+      <main className="relative z-10 flex-1 min-h-0 flex items-center justify-center px-6 lg:px-10 py-6 lg:py-8">
+        <div className="w-full max-w-6xl grid lg:grid-cols-[1.05fr_0.95fr] gap-10 lg:gap-14 items-center">
+          <div className="space-y-8">
+            <div>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium border border-nexo-border bg-nexo-composer/60 text-nexo-muted mb-5">
+                <Sparkles className="w-3.5 h-3.5 text-nexo-brand" />
+                Intelligence built for builders
+              </span>
+              <h1 className="font-display text-[2.25rem] sm:text-4xl lg:text-[2.75rem] font-bold leading-[1.08] tracking-tight text-nexo-fg">
+                Build software with{" "}
+                <span className="nexo-gradient-text">NEXOPLUS</span> in one studio.
+              </h1>
+              <p className="mt-4 text-[15px] text-nexo-muted max-w-lg leading-relaxed">
+                Chat, generate full projects, import your codebase, and sync to GitHub — without
+                leaving the browser.
+              </p>
+            </div>
+
+            <div className="grid sm:grid-cols-3 gap-3">
+              {HIGHLIGHTS.map(({ icon: Icon, title, desc }) => (
+                <div
+                  key={title}
+                  className="rounded-2xl border border-nexo-border bg-nexo-sidebar/80 nexo-glass p-4 shadow-sm"
+                >
+                  <Icon className="w-5 h-5 text-nexo-brand mb-2" />
+                  <p className="text-[12px] font-semibold text-nexo-fg leading-snug">{title}</p>
+                  <p className="text-[11px] text-nexo-muted mt-1 leading-snug">{desc}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="hidden lg:flex items-center gap-3 rounded-2xl border border-nexo-border bg-nexo-composer/50 p-4 max-w-md">
+              <div className="h-10 w-10 rounded-lg nexo-btn-primary flex items-center justify-center shrink-0">
+                <Code2 className="w-5 h-5 text-white" />
+              </div>
+              <p className="text-[12px] text-nexo-muted leading-relaxed">
+                Each chat keeps its own file tree — switch chats without mixing projects.
+              </p>
+            </div>
+          </div>
+
+          <div className="w-full max-w-[420px] mx-auto lg:max-w-none lg:ml-auto">
+            <div className="nexo-glass bg-nexo-sidebar border border-nexo-border rounded-3xl shadow-composer p-7 sm:p-8">
+              <h2 className="font-display text-xl font-semibold text-nexo-fg">
+                {tab === "signin" ? "Welcome back" : "Create your account"}
               </h2>
-              <p className="text-center text-[13px] text-nexo-muted mt-1 mb-6">
-                Sign in, create an account, or try the studio as a guest.
+              <p className="text-[13px] text-nexo-muted mt-1 mb-5">
+                Sign in, sign up, or continue as a guest.
               </p>
 
-              <div className="flex rounded-xl border border-nexo-border p-0.5 mb-6 bg-nexo-composer/40">
+              <div className="flex rounded-xl border border-nexo-border p-0.5 mb-5 bg-nexo-composer/40">
                 {(["signin", "signup"] as AuthTab[]).map((t) => (
                   <button
                     key={t}
@@ -173,7 +204,7 @@ export function LandingPage({ onAuthenticated }: LandingPageProps) {
               </div>
 
               {tab === "signup" && (
-                <label className="block text-[12px] text-nexo-muted mb-4">
+                <label className="block text-[12px] text-nexo-muted mb-3">
                   Your name
                   <input
                     value={name}
@@ -185,7 +216,10 @@ export function LandingPage({ onAuthenticated }: LandingPageProps) {
                 </label>
               )}
 
-              <form onSubmit={tab === "signin" ? handleSignIn : handleSignUp} className="space-y-4">
+              <form
+                onSubmit={tab === "signin" ? handleSignIn : handleSignUp}
+                className="space-y-3.5"
+              >
                 <label className="block text-[12px] text-nexo-muted">
                   Email
                   <input
@@ -217,7 +251,7 @@ export function LandingPage({ onAuthenticated }: LandingPageProps) {
                 <button
                   type="submit"
                   disabled={busy}
-                  className="w-full py-3 rounded-xl nexo-btn-primary font-semibold text-sm disabled:opacity-50"
+                  className="w-full py-3 rounded-xl nexo-btn-primary font-semibold text-sm disabled:opacity-50 mt-1"
                 >
                   {busy ? (
                     <span className="inline-flex items-center gap-2 justify-center">
@@ -232,12 +266,12 @@ export function LandingPage({ onAuthenticated }: LandingPageProps) {
                 </button>
               </form>
 
-              <div className="relative my-6">
+              <div className="relative my-5">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-nexo-border" />
                 </div>
                 <div className="relative flex justify-center text-[11px]">
-                  <span className="bg-nexo-sidebar px-2 text-nexo-muted">or continue with</span>
+                  <span className="bg-nexo-sidebar px-2 text-nexo-muted">or</span>
                 </div>
               </div>
 
@@ -246,13 +280,8 @@ export function LandingPage({ onAuthenticated }: LandingPageProps) {
                 disabled={busy || !googleEnabled}
                 onClick={() => startGoogleSignIn()}
                 className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-nexo-border bg-white text-gray-800 text-sm font-medium hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed dark:bg-nexo-composer dark:text-nexo-fg dark:hover:bg-nexo-hover"
-                title={
-                  googleEnabled
-                    ? "Sign in with Google"
-                    : "Ask your admin to add Google OAuth credentials in Studio settings"
-                }
               >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" aria-hidden>
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" aria-hidden>
                   <path
                     fill="#4285F4"
                     d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -277,14 +306,18 @@ export function LandingPage({ onAuthenticated }: LandingPageProps) {
                 type="button"
                 disabled={busy}
                 onClick={() => void handleGuest()}
-                className="mt-4 w-full py-2.5 rounded-xl text-[13px] font-medium text-nexo-muted hover:text-nexo-fg hover:bg-nexo-hover border border-transparent hover:border-nexo-border transition-colors"
+                className="mt-3 w-full py-2.5 rounded-xl text-[13px] font-medium border border-nexo-border text-nexo-muted hover:text-nexo-fg hover:bg-nexo-hover transition-colors"
               >
                 Continue as guest
               </button>
             </div>
           </div>
-        </section>
-      </div>
+        </div>
+      </main>
+
+      <footer className="relative z-10 shrink-0 py-3 text-center text-[10px] text-nexo-muted border-t border-nexo-border/50">
+        © {new Date().getFullYear()} NEXOPLUS Automations
+      </footer>
     </div>
   );
 }
