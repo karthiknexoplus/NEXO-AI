@@ -21,4 +21,4 @@ export function isFailedAssistantReply(text: string): boolean {
 }
 
 export const STUB_REPLY_MESSAGE =
-  "NEXOPLUS cloud returned only an internal safety stub — no files were written. Ask again, or on the server set NEXO_CLOUD_MODEL_SMART to a stable instruct model (e.g. qwen/qwen-2.5-7b-instruct:free), then run `cd web && npm run build` and restart nexoplus-web.";
+  "NEXOPLUS couldn't draft files for that message. Please send the request again, or try NEXOPLUS Fast mode. If it keeps happening, contact NEXOPLUS Automations support.";

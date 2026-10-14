@@ -202,6 +202,20 @@ async function fetchOllamaChat(mode, messages) {
   });
 }
 
+/** User-visible only — no vendor names or server env hints. */
+function customerChatError(httpStatus) {
+  if (httpStatus === 401 || httpStatus === 403) {
+    return "NEXOPLUS intelligence is not fully configured yet. Please try again later or contact NEXOPLUS Automations support.";
+  }
+  if (httpStatus === 429) {
+    return "NEXOPLUS is handling a lot of requests right now. Wait a minute and try again, or switch to NEXOPLUS Fast.";
+  }
+  if (httpStatus === 402 || httpStatus === 400) {
+    return "NEXOPLUS could not complete that request. Try a shorter prompt or NEXOPLUS Fast mode.";
+  }
+  return "NEXOPLUS intelligence is temporarily unavailable. Please try again in a few minutes.";
+}
+
 async function handleIntelligenceChat(req, res) {
   const raw = await readBody(req);
   let body = {};
@@ -236,10 +250,9 @@ async function handleIntelligenceChat(req, res) {
       (streamed.text || "").slice(0, 500)
     );
     if (!ollamaFallbackEnabled()) {
-      let hint = "Check OPENROUTER_API_KEY on the server and OpenRouter credits/limits.";
-      if (upstream.status === 401) hint = "Invalid OpenRouter API key — create a new key and update cloud.conf.";
-      if (upstream.status === 429) hint = "OpenRouter rate limit — wait a minute or switch to Fast mode.";
-      return sendJson(res, 503, { error: `NEXOPLUS cloud unavailable. ${hint}` });
+      console.error("[nexoplus] cloud chat", { backend, model, status: upstream.status });
+      const friendly = customerChatError(upstream.status);
+      return sendJson(res, 503, { error: friendly });
     }
     upstream = await fetchOllamaChat(mode, messages);
   } else {
