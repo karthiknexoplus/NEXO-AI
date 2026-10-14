@@ -35,6 +35,7 @@ interface ChatState {
   appendMessage: (threadId: string, msg: Message) => void;
   updateAssistant: (threadId: string, messageId: string, content: string) => void;
   renameThread: (threadId: string, title: string) => void;
+  deleteThread: (threadId: string) => void;
 }
 
 const defaultProject: Project = {
@@ -119,6 +120,17 @@ export const useChatStore = create<ChatState>()(
         set((s) => ({
           threads: s.threads.map((t) => (t.id === threadId ? { ...t, title } : t)),
         })),
+
+      deleteThread: (threadId) =>
+        set((s) => {
+          const remaining = s.threads.filter((t) => t.id !== threadId);
+          const inProject = remaining.filter((t) => t.projectId === s.activeProjectId);
+          let activeThreadId = s.activeThreadId;
+          if (activeThreadId === threadId) {
+            activeThreadId = inProject[0]?.id ?? null;
+          }
+          return { threads: remaining, activeThreadId };
+        }),
     }),
     { name: "nexo-chat-v2" }
   )

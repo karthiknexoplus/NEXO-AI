@@ -6,6 +6,7 @@ import {
   Rocket,
   Search,
   Sun,
+  Trash2,
 } from "lucide-react";
 import clsx from "clsx";
 import { useChatStore } from "../store/chatStore";
@@ -26,6 +27,7 @@ export function Sidebar({ onBuildMyApp, onDownloadZip }: SidebarProps) {
     newThread,
     setActiveThread,
     newProject,
+    deleteThread,
   } = useChatStore();
   const { theme, toggle } = useThemeStore();
 
@@ -123,18 +125,34 @@ export function Sidebar({ onBuildMyApp, onDownloadZip }: SidebarProps) {
             <li className="text-[12px] text-nexo-muted px-2 py-3">Start a new chat</li>
           )}
           {projectThreads.map((t) => (
-            <li key={t.id}>
+            <li key={t.id} className="group flex items-center gap-0.5">
               <button
                 type="button"
                 onClick={() => setActiveThread(t.id)}
                 className={clsx(
-                  "w-full text-left px-2.5 py-2 rounded-lg text-[13px] transition-all duration-200 truncate",
+                  "flex-1 min-w-0 text-left px-2.5 py-2 rounded-lg text-[13px] transition-all duration-200 truncate",
                   t.id === activeThreadId
                     ? "bg-nexo-hover text-nexo-fg"
                     : "text-nexo-muted hover:bg-nexo-hover/70"
                 )}
               >
                 {t.title}
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (
+                    window.confirm(`Delete chat "${t.title}"? This cannot be undone.`)
+                  ) {
+                    deleteThread(t.id);
+                  }
+                }}
+                className="shrink-0 p-2 rounded-lg text-nexo-muted opacity-0 group-hover:opacity-100 hover:text-red-500 hover:bg-nexo-hover transition-all"
+                aria-label={`Delete chat ${t.title}`}
+                title="Delete chat"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
               </button>
             </li>
           ))}
