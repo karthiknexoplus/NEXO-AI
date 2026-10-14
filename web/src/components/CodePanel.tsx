@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import Editor from "@monaco-editor/react";
-import { FileCode2, PanelRightClose, PanelRightOpen, Save } from "lucide-react";
+import { FileCode2, Loader2, PanelRightClose, PanelRightOpen, Save } from "lucide-react";
 import clsx from "clsx";
 import {
   listProjectFiles,
@@ -9,6 +9,7 @@ import {
 } from "../lib/workspace";
 import { useChatStore } from "../store/chatStore";
 import { useThemeStore } from "../store/themeStore";
+import { labelForPhase } from "../lib/generationStatus";
 import { useUiStore } from "../store/uiStore";
 
 function languageForPath(filePath: string): string {
@@ -38,6 +39,8 @@ export function CodePanel() {
     (s) => s.threads.some((t) => t.projectId === s.activeProjectId)
   );
   const workspaceVersion = useUiStore((s) => s.workspaceVersion);
+  const generationPhase = useUiStore((s) => s.generationPhase);
+  const generationDetail = useUiStore((s) => s.generationDetail);
   const codePanelOpen = useUiStore((s) => s.codePanelOpen);
   const setCodePanelOpen = useUiStore((s) => s.setCodePanelOpen);
   const theme = useThemeStore((s) => s.theme);
@@ -136,7 +139,12 @@ export function CodePanel() {
         <ul className="w-[140px] shrink-0 overflow-y-auto border-r border-nexo-border py-2 text-[11px]">
           {files.length === 0 && (
             <li className="px-3 py-4 text-nexo-muted leading-snug">
-              {hasChatsInProject
+              {generationPhase ? (
+                <span className="flex items-start gap-2">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0 mt-0.5 text-nexo-brand" />
+                  {labelForPhase(generationPhase, generationDetail)}
+                </span>
+              ) : hasChatsInProject
                 ? "Files appear here when NEXOPLUS generates your project."
                 : "Start a new chat to generate project files."}
             </li>
@@ -190,7 +198,12 @@ export function CodePanel() {
             </>
           ) : (
             <div className="flex-1 flex items-center justify-center text-[12px] text-nexo-muted p-6 text-center">
-              {hasChatsInProject
+              {generationPhase ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-nexo-brand" />
+                  {labelForPhase(generationPhase, generationDetail)}
+                </span>
+              ) : hasChatsInProject
                 ? "Select a file or ask NEXOPLUS to generate your app."
                 : "No chat selected — start a new chat."}
             </div>

@@ -49,10 +49,12 @@ export async function streamSanitizedSseToClient(res, upstream) {
         const obj = JSON.parse(payload);
         const delta = obj.choices?.[0]?.delta;
         if (delta) {
+          let text = delta.content;
+          if (!text?.trim() && delta.reasoning) text = delta.reasoning;
           delete delta.reasoning;
-          if (delta.content && shouldDropStreamToken(delta.content)) {
-            continue;
-          }
+          if (text && shouldDropStreamToken(text)) continue;
+          if (text) delta.content = text;
+          else delete delta.content;
         }
         res.write(`data: ${JSON.stringify(obj)}\n\n`);
       } catch {

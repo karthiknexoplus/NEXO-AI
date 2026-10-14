@@ -13,6 +13,7 @@ import {
   STUB_REPLY_MESSAGE,
   stripAssistantLeaks,
 } from "../lib/sanitizeAssistant";
+import { labelForPhase, phaseFromStream } from "../lib/generationStatus";
 import { applyGeneratedFiles } from "../lib/workspace";
 import { useChatStore, type Message } from "../store/chatStore";
 import { useUiStore } from "../store/uiStore";
@@ -36,9 +37,13 @@ export function ChatArea({ modes }: ChatAreaProps) {
   const thread = threads.find((t) => t.id === activeThreadId);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [streamingAssistantId, setStreamingAssistantId] = useState<string | null>(null);
   const [fileToast, setFileToast] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const bumpWorkspace = useUiStore((s) => s.bumpWorkspace);
+  const setGeneration = useUiStore((s) => s.setGeneration);
+  const generationPhase = useUiStore((s) => s.generationPhase);
+  const generationDetail = useUiStore((s) => s.generationDetail);
   const pendingPrompt = useUiStore((s) => s.pendingPrompt);
   const pendingAutoSend = useUiStore((s) => s.pendingAutoSend);
   const clearPendingPrompt = useUiStore((s) => s.clearPendingPrompt);
@@ -70,9 +75,11 @@ export function ChatArea({ modes }: ChatAreaProps) {
     const assistantId = `a-${Date.now()}`;
     appendMessage(threadId, userMsg);
     appendMessage(threadId, { id: assistantId, role: "assistant", content: "" });
+    setStreamingAssistantId(assistantId);
     if (!overrideText) setInput("");
     setSending(true);
     setFileToast(null);
+    setGeneration("thinking", null);
 
     const current = useChatStore.getState().threads.find((t) => t.id === threadId);
     const history =
@@ -90,7 +97,10 @@ export function ChatArea({ modes }: ChatAreaProps) {
         let acc = "";
         await streamIntelligenceChat(messages, intelligenceMode, (token) => {
           acc += token;
-          updateAssistant(threadId!, assistantId, stripAssistantLeaks(acc));
+          const clean = stripAssistantLeaks(acc);
+          const { phase, detail } = phaseFromStream(clean);
+          setGeneration(phase, detail);
+          updateAssistant(threadId!, assistantId, clean);
         });
         return stripAssistantLeaks(acc);
       };
@@ -115,6 +125,7 @@ export function ChatArea({ modes }: ChatAreaProps) {
       updateAssistant(threadId!, assistantId, acc);
 
       try {
+        setGeneration("saving", null);
         const written = await applyGeneratedFiles(acc, activeProjectId);
         if (written.length > 0) {
           bumpWorkspace();
@@ -130,6 +141,8 @@ export function ChatArea({ modes }: ChatAreaProps) {
       updateAssistant(threadId!, assistantId, msg);
     } finally {
       setSending(false);
+      setStreamingAssistantId(null);
+      setGeneration(null, null);
     }
   };
 
@@ -158,6 +171,16 @@ export function ChatArea({ modes }: ChatAreaProps) {
           ))}
         </div>
       </header>
+
+      {sending && generationPhase && (
+        <div className="mx-5 mt-3 px-3 py-2.5 rounded-xl border border-nexo-border bg-nexo-composer/80 flex items-center gap-2.5 text-[12px] text-nexo-fg animate-fade-in">
+          <Loader2 className="w-3.5 h-3.5 animate-spin text-nexo-brand shrink-0" />
+          <span className="font-medium">{labelForPhase(generationPhase, generationDetail)}</span>
+          <span className="text-nexo-muted hidden sm:inline">
+            {activeMode?.label ?? "NEXOPLUS"}
+          </span>
+        </div>
+      )}
 
       {fileToast && (
         <div className="mx-5 mt-3 px-3 py-2 rounded-xl bg-nexo-brand/15 border border-nexo-brand/30 text-[12px] text-nexo-fg animate-fade-in">
@@ -212,11 +235,22 @@ export function ChatArea({ modes }: ChatAreaProps) {
                     </div>
                     <div className="prose-chat flex-1 min-w-0">
                       {m.content ? (
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
+                        <>
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
+                          {sending &&
+                            m.id === streamingAssistantId &&
+                            generationPhase &&
+                            generationPhase !== "drafting" && (
+                              <p className="mt-2 flex items-center gap-2 text-[12px] text-nexo-muted">
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                {labelForPhase(generationPhase, generationDetail)}
+                              </p>
+                            )}
+                        </>
                       ) : (
                         <div className="flex items-center gap-2 text-nexo-muted text-sm">
                           <Loader2 className="w-4 h-4 animate-spin" />
-                          NEXOPLUS is thinking…
+                          {labelForPhase(generationPhase ?? "thinking", generationDetail)}
                         </div>
                       )}
                     </div>

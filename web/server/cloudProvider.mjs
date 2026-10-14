@@ -17,10 +17,10 @@ export function intelligenceBackend() {
 
 const CLOUD_MODELS = {
   openrouter: {
-    // Avoid openrouter/free — it often routes to models that emit "User Safety:" stubs only.
-    fast: process.env.NEXO_CLOUD_MODEL_FAST || "meta-llama/llama-3.2-3b-instruct:free",
-    smart: process.env.NEXO_CLOUD_MODEL_SMART || "meta-llama/llama-3.3-70b-instruct:free",
-    deep: process.env.NEXO_CLOUD_MODEL_DEEP || "meta-llama/llama-3.3-70b-instruct:free",
+    // Per-model :free slugs are often disabled per account; openrouter/free still works for many keys.
+    fast: process.env.NEXO_CLOUD_MODEL_FAST || "openrouter/free",
+    smart: process.env.NEXO_CLOUD_MODEL_SMART || "openrouter/free",
+    deep: process.env.NEXO_CLOUD_MODEL_DEEP || "openrouter/free",
   },
   groq: {
     fast: process.env.NEXO_CLOUD_MODEL_FAST || "llama-3.1-8b-instant",
