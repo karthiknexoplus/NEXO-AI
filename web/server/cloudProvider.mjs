@@ -1,5 +1,7 @@
 /** Server-only: OpenAI-compatible cloud APIs (keys never sent to browser). */
 
+import { resolveMaxOutputTokens } from "./limits.mjs";
+
 export function intelligenceBackend() {
   const forced = (process.env.NEXO_INTELLIGENCE_PROVIDER || "").toLowerCase();
   if (forced === "ollama") return "ollama";
@@ -47,6 +49,7 @@ export function cloudChatRequest(backend, model, messages, mode) {
     stream: true,
     temperature,
     messages,
+    max_tokens: resolveMaxOutputTokens(mode),
   };
 
   if (backend === "openrouter") {

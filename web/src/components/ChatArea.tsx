@@ -112,7 +112,7 @@ export function ChatArea({ modes }: ChatAreaProps) {
           {
             role: "user",
             content:
-              `${text}\n\nReply as NEXOPLUS with the full files in path code fences (e.g. \`\`\`demo-project/README.md). No safety labels.`,
+              `${text}\n\nReply as NEXOPLUS: output every file using markdown path fences only (no tool_call or write(path= syntax). Example: \`\`\`calculator-app/package.json`,
           },
         ]);
       }
@@ -282,8 +282,8 @@ export function ChatArea({ modes }: ChatAreaProps) {
               }}
               disabled={sending}
               placeholder="Message NEXOPLUS…"
-              rows={3}
-              className="w-full resize-none bg-transparent px-4 pt-4 pb-2 text-[14px] placeholder:text-nexo-muted focus:outline-none"
+              rows={4}
+              className="w-full resize-y min-h-[88px] max-h-[40vh] bg-transparent px-4 pt-4 pb-2 text-[14px] placeholder:text-nexo-muted focus:outline-none"
             />
             <div className="flex items-center justify-between px-3 pb-3">
               <span className="text-[11px] text-nexo-muted pl-1">

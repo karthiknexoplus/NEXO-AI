@@ -10,6 +10,11 @@ import {
   resolveCloudModel,
 } from "./server/cloudProvider.mjs";
 import { publicModes, resolveModel } from "./server/models.mjs";
+import {
+  maxRequestBodyBytes,
+  resolveOllamaNumCtx,
+  resolveOllamaNumPredict,
+} from "./server/limits.mjs";
 import { streamSanitizedSseToClient } from "./server/sanitizeStream.mjs";
 import {
   handleClearProject,
@@ -32,10 +37,16 @@ Project workspace (files panel + ZIP download):
 - You cannot browse or write to the user's computer directly. When they ask to "create a folder" or "add files", write files into the NEXOPLUS project workspace using path fences below. Parent folders are created automatically from paths (e.g. \`my-app/src/index.js\` creates \`my-app/src/\`).
 - Do not refuse normal dev tasks (folders, scripts, configs) as "unsafe" if they are ordinary software work. Do not output internal safety labels (e.g. "User Safety", "Response Safety") — only user-facing NEXOPLUS replies.
 
-When generating files, ALWAYS use fences with the file path on the first line:
+Output format (critical):
+- NEVER use tool-call syntax, XML tags, or APIs like write(path=...), <|tool_call|>, or "Let me plan the file structure" as the final answer.
+- ONLY use markdown code fences so NEXOPLUS can save files. One fence per file:
+
 \`\`\`path/to/file.ext
 ...full file contents...
 \`\`\`
+
+- Put a short friendly sentence before the fences, then output ALL files completely (no placeholders, no truncated tool blocks).
+- For Vite: use index.html at project root (not only public/), include @vitejs/plugin-react in package.json and vite.config.js.
 
 Be concise. Production-ready code. Use path fences for every file you create.`;
 
@@ -64,8 +75,16 @@ function safeJoin(root, relativePath) {
 }
 
 async function readBody(req) {
+  const maxBytes = maxRequestBodyBytes();
   const chunks = [];
-  for await (const chunk of req) chunks.push(chunk);
+  let size = 0;
+  for await (const chunk of req) {
+    size += chunk.length;
+    if (maxBytes > 0 && size > maxBytes) {
+      throw new Error("REQUEST_TOO_LARGE");
+    }
+    chunks.push(chunk);
+  }
   return Buffer.concat(chunks).toString("utf8");
 }
 
@@ -85,8 +104,8 @@ async function proxyOllama(req, res, urlPath) {
     payload.keep_alive = "30m";
     payload.options = {
       ...(payload.options || {}),
-      num_ctx: 8192,
-      num_predict: 2048,
+      num_ctx: resolveOllamaNumCtx("smart"),
+      num_predict: resolveOllamaNumPredict("smart"),
     };
     payload.temperature = payload.temperature ?? 0.2;
     payload.stream = true;
@@ -172,23 +191,14 @@ async function streamUpstreamToClient(res, upstream) {
 
 async function fetchOllamaChat(mode, messages) {
   const model = resolveModel(mode);
-  const light = process.env.NEXO_LIGHT === "1" || process.env.NEXO_LIGHT === "true";
   const payload = {
     model,
     stream: true,
     temperature: mode === "fast" ? 0.15 : 0.22,
     keep_alive: "30m",
     options: {
-      num_ctx: light
-        ? mode === "deep"
-          ? 4096
-          : 3072
-        : mode === "deep"
-          ? 8192
-          : mode === "fast"
-            ? 4096
-            : 6144,
-      num_predict: mode === "fast" ? 1024 : 1536,
+      num_ctx: resolveOllamaNumCtx(mode),
+      num_predict: resolveOllamaNumPredict(mode),
       num_thread: Number(process.env.OLLAMA_NUM_THREADS || 0) || undefined,
     },
     messages,
@@ -217,7 +227,17 @@ function customerChatError(httpStatus) {
 }
 
 async function handleIntelligenceChat(req, res) {
-  const raw = await readBody(req);
+  let raw;
+  try {
+    raw = await readBody(req);
+  } catch (e) {
+    if (e instanceof Error && e.message === "REQUEST_TOO_LARGE") {
+      return sendJson(res, 413, {
+        error: "That message is too large for NEXOPLUS. Shorten it or split into parts.",
+      });
+    }
+    throw e;
+  }
   let body = {};
   try {
     body = JSON.parse(raw || "{}");

@@ -1,4 +1,6 @@
 const SAFETY_LINE = /^\s*(?:user|response)\s+safety\s*:\s*\w+\s*$/gim;
+const TOOL_CALL_BLOCK = /<\|tool_call[\s\S]*?(<\|[^|]*tool_call[^|]*\|>|$)/gi;
+const TOOL_CALL_TAG = /<\|[^|]*\|>/g;
 
 export function shouldDropStreamToken(token: string): boolean {
   const t = (token || "").trim();
@@ -8,12 +10,18 @@ export function shouldDropStreamToken(token: string): boolean {
 
 export function stripAssistantLeaks(text: string): string {
   if (!text) return "";
-  return text.replace(SAFETY_LINE, "").trim();
+  return text
+    .replace(SAFETY_LINE, "")
+    .replace(TOOL_CALL_BLOCK, "")
+    .replace(TOOL_CALL_TAG, "")
+    .trim();
 }
 
 export function isFailedAssistantReply(text: string): boolean {
   const clean = stripAssistantLeaks(text);
   if (!clean) return true;
+  const hadToolLeak = /tool_call|write\(path=/i.test(text);
+  if (hadToolLeak && !text.includes("```")) return true;
   if (!clean.includes("```") && /safety\s*:\s*\w+/i.test(clean) && clean.length < 120) {
     return true;
   }
