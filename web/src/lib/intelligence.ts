@@ -30,20 +30,37 @@ export async function fetchIntelligenceModes(): Promise<IntelligenceModeOption[]
   }
 }
 
+let activeChatAbort: AbortController | null = null;
+
+export function abortIntelligenceChat() {
+  activeChatAbort?.abort();
+  activeChatAbort = null;
+}
+
 export async function streamIntelligenceChat(
   messages: ChatMessage[],
   mode: IntelligenceMode,
-  onToken: (t: string) => void
+  onToken: (t: string) => void,
+  signal?: AbortSignal
 ): Promise<void> {
+  activeChatAbort?.abort();
+  const controller = new AbortController();
+  activeChatAbort = controller;
+  const linked = signal ?? controller.signal;
+
   let res: Response;
   try {
     res = await fetch("/api/intelligence/chat", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
-    body: JSON.stringify({ mode, messages }),
-  });
-  } catch {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
+      body: JSON.stringify({ mode, messages }),
+      signal: linked,
+    });
+  } catch (e) {
+    if (linked.aborted) throw new Error("Stopped");
     throw new Error("Load failed");
+  } finally {
+    if (activeChatAbort === controller) activeChatAbort = null;
   }
 
   if (!res.ok) {

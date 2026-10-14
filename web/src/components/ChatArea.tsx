@@ -1,9 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { ArrowUp, Loader2 } from "lucide-react";
+import { ArrowUp, Loader2, Square } from "lucide-react";
 import clsx from "clsx";
-import type { IntelligenceMode, IntelligenceModeOption } from "../lib/intelligence";
+import {
+  abortIntelligenceChat,
+  type IntelligenceMode,
+  type IntelligenceModeOption,
+} from "../lib/intelligence";
 import { labelForPhase } from "../lib/generationStatus";
 import { runChatGeneration } from "../lib/runChatGeneration";
 import { isFailedAssistantReply, STUB_REPLY_MESSAGE } from "../lib/sanitizeAssistant";
@@ -40,6 +44,8 @@ export function ChatArea({ modes }: ChatAreaProps) {
   const pendingPrompt = useUiStore((s) => s.pendingPrompt);
   const pendingAutoSend = useUiStore((s) => s.pendingAutoSend);
   const clearPendingPrompt = useUiStore((s) => s.clearPendingPrompt);
+  const setOpenFilePath = useUiStore((s) => s.setOpenFilePath);
+  const setCodePanelOpen = useUiStore((s) => s.setCodePanelOpen);
 
   const activeMode =
     modes.find((m) => m.id === intelligenceMode) ?? modes[1] ?? modes[0];
@@ -107,6 +113,13 @@ export function ChatArea({ modes }: ChatAreaProps) {
           updateAssistant(threadId!, assistantId, clean);
         },
         onSaving: () => setGeneration("saving", null),
+        onFilesWritten: (paths) => {
+          const last = paths[paths.length - 1];
+          if (last) {
+            setCodePanelOpen(true);
+            setOpenFilePath(last);
+          }
+        },
       });
 
       if (!acc.trim() || isFailedAssistantReply(acc)) {
@@ -122,6 +135,15 @@ export function ChatArea({ modes }: ChatAreaProps) {
       }
     } catch (e) {
       const raw = e instanceof Error ? e.message : "Something went wrong.";
+      if (raw === "Stopped") {
+        const partial = useChatStore
+          .getState()
+          .threads.find((t) => t.id === threadId)
+          ?.messages.find((m) => m.id === assistantId)
+          ?.content?.trim();
+        if (partial) updateAssistant(threadId!, assistantId, `${partial}\n\n_(Stopped)_`);
+        return;
+      }
       const msg = formatNetworkError(raw);
       updateAssistant(threadId!, assistantId, msg);
     } finally {
@@ -160,10 +182,18 @@ export function ChatArea({ modes }: ChatAreaProps) {
       {sending && generationPhase && (
         <div className="mx-5 mt-3 px-3 py-2.5 rounded-xl border border-nexo-border bg-nexo-composer/80 flex items-center gap-2.5 text-[12px] text-nexo-fg animate-fade-in">
           <Loader2 className="w-3.5 h-3.5 animate-spin text-nexo-brand shrink-0" />
-          <span className="font-medium">{labelForPhase(generationPhase, generationDetail)}</span>
-          <span className="text-nexo-muted hidden sm:inline">
-            {activeMode?.label ?? "NEXOPLUS"}
+          <span className="font-medium flex-1 min-w-0 truncate">
+            {labelForPhase(generationPhase, generationDetail)}
           </span>
+          <button
+            type="button"
+            onClick={() => abortIntelligenceChat()}
+            className="shrink-0 flex items-center gap-1 px-2 py-1 rounded-lg border border-nexo-border hover:bg-nexo-hover text-[11px]"
+            title="Stop generating"
+          >
+            <Square className="w-3 h-3 fill-current" />
+            Stop
+          </button>
         </div>
       )}
 

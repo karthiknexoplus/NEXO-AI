@@ -6,6 +6,7 @@ import {
   MessageSquarePlus,
   Moon,
   Rocket,
+  Search,
   Sun,
   Trash2,
 } from "lucide-react";
@@ -36,8 +37,15 @@ export function Sidebar({ onBuildMyApp, onDownloadZip }: SidebarProps) {
   const bumpWorkspace = useUiStore((s) => s.bumpWorkspace);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
+  const [chatQuery, setChatQuery] = useState("");
 
-  const projectThreads = threads.filter((t) => t.projectId === activeProjectId);
+  const projectThreads = threads
+    .filter((t) => t.projectId === activeProjectId)
+    .filter((t) =>
+      chatQuery.trim()
+        ? t.title.toLowerCase().includes(chatQuery.trim().toLowerCase())
+        : true
+    );
 
   const onImportFolder = async (list: FileList | null) => {
     if (!list?.length) return;
@@ -161,6 +169,16 @@ export function Sidebar({ onBuildMyApp, onDownloadZip }: SidebarProps) {
         <span className="text-[11px] font-semibold uppercase tracking-wider text-nexo-muted mb-2">
           Chats
         </span>
+        <div className="relative mb-2">
+          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-nexo-muted" />
+          <input
+            type="search"
+            value={chatQuery}
+            onChange={(e) => setChatQuery(e.target.value)}
+            placeholder="Search chats"
+            className="w-full pl-8 pr-2 py-1.5 rounded-lg text-[12px] bg-nexo-composer/50 border border-nexo-border placeholder:text-nexo-muted focus:outline-none focus:ring-1 focus:ring-nexo-brand/40"
+          />
+        </div>
         <ul className="space-y-0.5 overflow-y-auto flex-1 pr-1">
           {projectThreads.length === 0 && (
             <li className="text-[12px] text-nexo-muted px-2 py-3">Start a new chat</li>

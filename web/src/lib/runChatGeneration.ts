@@ -38,8 +38,10 @@ export async function runChatGeneration(opts: {
   chatHistory: ChatTurnMessage[];
   onToken: (content: string, phase: GenerationPhase, detail: string | null) => void;
   onSaving: () => void;
+  onFilesWritten?: (paths: string[]) => void;
 }): Promise<{ content: string; written: string[] }> {
-  const { mode, projectId, userText, chatHistory, onToken, onSaving } = opts;
+  const { mode, projectId, userText, chatHistory, onToken, onSaving, onFilesWritten } =
+    opts;
 
   const runStream = async (messages: ChatTurnMessage[], detailOverride?: string | null) => {
     let acc = "";
@@ -82,6 +84,7 @@ export async function runChatGeneration(opts: {
 
     onSaving();
     const written = await applyGeneratedFiles(part, projectId).catch(() => [] as string[]);
+    if (written.length) onFilesWritten?.(written);
     allWritten.push(...written);
 
     const failed = isFailedAssistantReply(acc);
@@ -114,6 +117,7 @@ export async function runChatGeneration(opts: {
     onToken(acc, phaseFromStream(acc).phase, null);
     onSaving();
     const w = await applyGeneratedFiles(retry, projectId).catch(() => [] as string[]);
+    if (w.length) onFilesWritten?.(w);
     allWritten.push(...w);
   }
 

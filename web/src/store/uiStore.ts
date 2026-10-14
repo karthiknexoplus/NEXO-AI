@@ -14,9 +14,11 @@ interface UiState {
   pendingAutoSend: boolean;
   generationPhase: GenerationPhase;
   generationDetail: string | null;
+  openFilePath: string | null;
   setCodePanelOpen: (open: boolean) => void;
   bumpWorkspace: () => void;
   setGeneration: (phase: GenerationPhase, detail?: string | null) => void;
+  setOpenFilePath: (path: string | null) => void;
   queuePrompt: (prompt: string, autoSend?: boolean) => void;
   clearPendingPrompt: () => void;
 }
@@ -28,7 +30,9 @@ export const useUiStore = create<UiState>((set) => ({
   pendingAutoSend: false,
   generationPhase: null,
   generationDetail: null,
+  openFilePath: null,
   setCodePanelOpen: (open) => set({ codePanelOpen: open }),
+  setOpenFilePath: (path) => set({ openFilePath: path }),
   bumpWorkspace: () => set((s) => ({ workspaceVersion: s.workspaceVersion + 1 })),
   setGeneration: (phase, detail = null) =>
     set({ generationPhase: phase, generationDetail: detail ?? null }),

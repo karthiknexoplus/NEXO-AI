@@ -41,6 +41,8 @@ export function CodePanel() {
   const workspaceVersion = useUiStore((s) => s.workspaceVersion);
   const generationPhase = useUiStore((s) => s.generationPhase);
   const generationDetail = useUiStore((s) => s.generationDetail);
+  const openFilePath = useUiStore((s) => s.openFilePath);
+  const setOpenFilePath = useUiStore((s) => s.setOpenFilePath);
   const codePanelOpen = useUiStore((s) => s.codePanelOpen);
   const setCodePanelOpen = useUiStore((s) => s.setCodePanelOpen);
   const theme = useThemeStore((s) => s.theme);
@@ -70,6 +72,14 @@ export function CodePanel() {
   useEffect(() => {
     void refresh();
   }, [projectId, workspaceVersion, hasChatsInProject, refresh]);
+
+  useEffect(() => {
+    if (!openFilePath) return;
+    if (files.includes(openFilePath)) {
+      setActiveFile(openFilePath);
+      setOpenFilePath(null);
+    }
+  }, [openFilePath, files, setOpenFilePath]);
 
   useEffect(() => {
     if (!activeFile) {
