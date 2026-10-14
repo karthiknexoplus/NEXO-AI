@@ -31,10 +31,16 @@ export default function App() {
   }, [theme]);
 
   useEffect(() => {
-    void fetchAuthMe().then((r) => {
-      setSession(r.authenticated ? r : null);
-      setAuthReady(true);
-    });
+    void fetchAuthMe()
+      .then((r) => {
+        setSession(r.authenticated ? r : null);
+      })
+      .catch(() => {
+        setSession(null);
+      })
+      .finally(() => {
+        setAuthReady(true);
+      });
   }, []);
 
   useEffect(() => {

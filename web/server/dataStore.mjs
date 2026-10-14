@@ -85,7 +85,7 @@ export function loadStore() {
   }
 }
 
-function saveStore(store) {
+export function saveStore(store) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
   fs.writeFileSync(STORE_PATH, JSON.stringify(store, null, 2), "utf8");
 }
