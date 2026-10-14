@@ -9,6 +9,7 @@ export type GenerationPhase =
 
 interface UiState {
   codePanelOpen: boolean;
+  sidebarOpen: boolean;
   workspaceVersion: number;
   pendingPrompt: string | null;
   pendingAutoSend: boolean;
@@ -16,6 +17,7 @@ interface UiState {
   generationDetail: string | null;
   openFilePath: string | null;
   setCodePanelOpen: (open: boolean) => void;
+  setSidebarOpen: (open: boolean) => void;
   bumpWorkspace: () => void;
   setGeneration: (phase: GenerationPhase, detail?: string | null) => void;
   setOpenFilePath: (path: string | null) => void;
@@ -25,6 +27,7 @@ interface UiState {
 
 export const useUiStore = create<UiState>((set) => ({
   codePanelOpen: true,
+  sidebarOpen: false,
   workspaceVersion: 0,
   pendingPrompt: null,
   pendingAutoSend: false,
@@ -32,6 +35,7 @@ export const useUiStore = create<UiState>((set) => ({
   generationDetail: null,
   openFilePath: null,
   setCodePanelOpen: (open) => set({ codePanelOpen: open }),
+  setSidebarOpen: (open) => set({ sidebarOpen: open }),
   setOpenFilePath: (path) => set({ openFilePath: path }),
   bumpWorkspace: () => set((s) => ({ workspaceVersion: s.workspaceVersion + 1 })),
   setGeneration: (phase, detail = null) =>

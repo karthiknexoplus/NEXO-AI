@@ -78,8 +78,8 @@ export function BuildWizard({ open, onClose, onSubmit }: BuildWizardProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/55 backdrop-blur-sm animate-fade-in">
-      <div className="w-full max-w-lg rounded-2xl border border-nexo-border nexo-glass bg-nexo-sidebar shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/55 backdrop-blur-sm animate-fade-in">
+      <div className="w-full sm:max-w-lg max-h-[92dvh] overflow-y-auto rounded-t-2xl sm:rounded-2xl border border-nexo-border nexo-glass bg-nexo-sidebar shadow-2xl">
         <div className="flex items-center justify-between px-5 py-4 border-b border-nexo-border">
           <div className="flex items-center gap-2">
             <Rocket className="w-5 h-5 text-nexo-brand" />
@@ -132,7 +132,7 @@ export function BuildWizard({ open, onClose, onSubmit }: BuildWizardProps) {
             <>
               <div>
                 <p className="text-[12px] text-nexo-muted mb-2">Technology stack</p>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {STACKS.map((s) => (
                     <button
                       key={s.id}

@@ -50,7 +50,7 @@ function verifyPassword(password, salt, hash) {
 function emptyStore() {
   const { salt, hash } = hashPassword(DEFAULT_PASSWORD);
   return {
-    users: [{ id: "1", email: DEFAULT_EMAIL, salt, hash }],
+    users: [{ id: "1", email: DEFAULT_EMAIL, salt, hash, role: "admin" }],
     sessions: {},
     providers: { ...DEFAULT_PROVIDERS },
     github: { ...DEFAULT_GITHUB },
@@ -77,6 +77,9 @@ export function loadStore() {
     data.oauth = { ...DEFAULT_OAUTH, ...data.oauth };
     data.oauthStates = data.oauthStates || {};
     data.sessions = data.sessions || {};
+    for (const u of data.users) {
+      if (isStudioAdmin(u.email)) u.role = "admin";
+    }
     return data;
   } catch {
     const initial = emptyStore();
@@ -120,6 +123,23 @@ export function publicGithubSettings(github) {
   };
 }
 
+export function isStudioAdmin(email) {
+  const normalized = (email || "").trim().toLowerCase();
+  if (!normalized) return false;
+  const admins = new Set([DEFAULT_EMAIL.toLowerCase()]);
+  for (const part of (process.env.NEXO_ADMIN_EMAILS || "").split(",")) {
+    const e = part.trim().toLowerCase();
+    if (e) admins.add(e);
+  }
+  return admins.has(normalized);
+}
+
+export function canUserManageSettings(user) {
+  if (!user || user.isGuest) return false;
+  if (user.role === "admin") return true;
+  return isStudioAdmin(user.email);
+}
+
 export function createSession(userId, extra = {}) {
   const store = loadStore();
   const token = randomBytes(32).toString("hex");
@@ -156,7 +176,7 @@ export function getSession(token) {
     userId: user.id,
     email: user.email,
     isGuest: !!user.isGuest,
-    canManageSettings: !user.isGuest,
+    canManageSettings: canUserManageSettings(user),
   };
 }
 

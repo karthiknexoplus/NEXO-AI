@@ -23,8 +23,18 @@ export default function App() {
   const theme = useThemeStore((s) => s.theme);
   const workspaceId = useWorkspaceId();
   const queuePrompt = useUiStore((s) => s.queuePrompt);
+  const sidebarOpen = useUiStore((s) => s.sidebarOpen);
+  const setSidebarOpen = useUiStore((s) => s.setSidebarOpen);
+  const setCodePanelOpen = useUiStore((s) => s.setCodePanelOpen);
 
   const signedIn = !!session?.authenticated;
+
+  useEffect(() => {
+    if (window.matchMedia("(max-width: 1023px)").matches) {
+      setCodePanelOpen(false);
+      setSidebarOpen(false);
+    }
+  }, [setCodePanelOpen, setSidebarOpen]);
 
   useEffect(() => {
     applyTheme(theme);
@@ -77,20 +87,41 @@ export default function App() {
           Guest session — sign up to save settings and use your own API keys.
         </div>
       )}
-      <div className="flex-1 flex min-h-0 overflow-hidden p-1.5 gap-1.5">
+      <div className="flex-1 flex min-h-0 overflow-hidden p-1 sm:p-1.5 gap-1.5 relative">
+        {sidebarOpen && (
+          <button
+            type="button"
+            aria-label="Close menu"
+            className="fixed inset-0 z-30 bg-black/50 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
         <Sidebar
-          onBuildMyApp={() => setWizardOpen(true)}
+          mobileOpen={sidebarOpen}
+          onMobileClose={() => setSidebarOpen(false)}
+          onBuildMyApp={() => {
+            setWizardOpen(true);
+            setSidebarOpen(false);
+          }}
           onDownloadZip={() => {
             if (workspaceId) downloadProjectZip(workspaceId);
             else window.alert("Start a chat or open an imported folder to download files.");
           }}
           onSignOut={handleSignOut}
           onOpenSettings={
-            session?.canManageSettings ? () => setSettingsOpen(true) : undefined
+            session?.canManageSettings
+              ? () => {
+                  setSettingsOpen(true);
+                  setSidebarOpen(false);
+                }
+              : undefined
           }
           userEmail={session?.email}
         />
-        <ChatArea modes={modes} />
+        <ChatArea
+          modes={modes}
+          onOpenSidebar={() => setSidebarOpen(true)}
+        />
         <CodePanel />
       </div>
       <AppFooter />

@@ -144,9 +144,9 @@ export function ProviderSettingsModal({ open, onClose }: ProviderSettingsModalPr
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm">
       <div
-        className="w-full max-w-lg max-h-[90vh] overflow-y-auto nexo-glass bg-nexo-sidebar border border-nexo-border rounded-2xl shadow-2xl"
+        className="w-full sm:max-w-lg max-h-[92dvh] sm:max-h-[90vh] overflow-y-auto nexo-glass bg-nexo-sidebar border border-nexo-border rounded-t-2xl sm:rounded-2xl shadow-2xl"
         role="dialog"
         aria-modal="true"
       >

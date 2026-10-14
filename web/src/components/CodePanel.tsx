@@ -142,20 +142,36 @@ export function CodePanel() {
 
   if (!codePanelOpen) {
     return (
-      <button
-        type="button"
-        onClick={() => setCodePanelOpen(true)}
-        className="shrink-0 w-11 rounded-2xl border border-nexo-border nexo-glass bg-nexo-sidebar flex flex-col items-center justify-center gap-1 text-nexo-muted hover:text-nexo-fg hover:border-nexo-brand/25 transition-colors"
-        title="Open code panel"
-      >
-        <PanelRightOpen className="w-4 h-4" />
-        <span className="text-[9px] writing-vertical">Code</span>
-      </button>
+      <>
+        <button
+          type="button"
+          onClick={() => setCodePanelOpen(true)}
+          className="hidden lg:flex shrink-0 w-11 rounded-2xl border border-nexo-border nexo-glass bg-nexo-sidebar flex-col items-center justify-center gap-1 text-nexo-muted hover:text-nexo-fg hover:border-nexo-brand/25 transition-colors"
+          title="Open code panel"
+        >
+          <PanelRightOpen className="w-4 h-4" />
+          <span className="text-[9px] writing-vertical">Code</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setCodePanelOpen(true)}
+          className="lg:hidden fixed bottom-[4.5rem] right-3 z-20 w-12 h-12 rounded-full nexo-btn-primary shadow-lg flex items-center justify-center"
+          aria-label="Open project files"
+        >
+          <FileCode2 className="w-5 h-5" />
+        </button>
+      </>
     );
   }
 
   return (
-    <aside className="w-[min(42vw,520px)] shrink-0 flex flex-col border border-nexo-border nexo-glass bg-nexo-sidebar rounded-2xl overflow-hidden transition-all duration-300">
+    <aside
+      className={clsx(
+        "shrink-0 flex flex-col border border-nexo-border nexo-glass bg-nexo-sidebar overflow-hidden transition-all duration-300",
+        "max-lg:fixed max-lg:inset-2 max-lg:z-50 max-lg:rounded-2xl max-lg:shadow-2xl",
+        "lg:relative lg:rounded-2xl lg:w-[min(42vw,520px)]"
+      )}
+    >
       <div className="h-14 flex items-center justify-between px-4 border-b border-nexo-border gap-2">
         <div className="min-w-0">
           <div className="flex items-center gap-2 text-[12px] font-semibold font-display text-nexo-fg">
@@ -213,9 +229,9 @@ export function CodePanel() {
         </div>
       </div>
 
-      <div className="flex flex-1 min-h-0 flex-col">
-        <div className="flex flex-1 min-h-0">
-          <ul className="w-[140px] shrink-0 overflow-y-auto border-r border-nexo-border py-2 text-[11px]">
+      <div className="flex flex-1 min-h-0 flex-col min-h-0">
+        <div className="flex flex-1 min-h-0 flex-col sm:flex-row">
+          <ul className="w-full sm:w-[140px] max-h-[28vh] sm:max-h-none shrink-0 overflow-y-auto border-b sm:border-b-0 sm:border-r border-nexo-border py-2 text-[11px] flex sm:block flex-row sm:flex-col gap-1 px-2 sm:px-0 overflow-x-auto sm:overflow-x-visible">
             {files.length === 0 && (
               <li className="px-3 py-4 text-nexo-muted leading-snug">
                 {generationPhase ? (
@@ -229,12 +245,12 @@ export function CodePanel() {
               </li>
             )}
             {files.map((f) => (
-              <li key={f}>
+              <li key={f} className="shrink-0 sm:shrink sm:w-full">
                 <button
                   type="button"
                   onClick={() => setActiveFile(f)}
                   className={clsx(
-                    "w-full text-left px-2 py-1.5 truncate font-mono transition-colors",
+                    "text-left px-2 py-1.5 truncate font-mono transition-colors rounded-lg sm:rounded-none sm:w-full whitespace-nowrap max-w-[140px] sm:max-w-none",
                     activeFile === f
                       ? "bg-nexo-brand/20 text-nexo-fg"
                       : "text-nexo-muted hover:bg-nexo-hover"

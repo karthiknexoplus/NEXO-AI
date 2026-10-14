@@ -20,6 +20,8 @@ import { useThemeStore } from "../store/themeStore";
 import { useUiStore } from "../store/uiStore";
 
 interface SidebarProps {
+  mobileOpen: boolean;
+  onMobileClose: () => void;
   onBuildMyApp: () => void;
   onDownloadZip: () => void;
   onSignOut: () => void;
@@ -28,6 +30,8 @@ interface SidebarProps {
 }
 
 export function Sidebar({
+  mobileOpen,
+  onMobileClose,
   onBuildMyApp,
   onDownloadZip,
   onSignOut,
@@ -88,6 +92,16 @@ export function Sidebar({
     }
   };
 
+  const pickThread = (id: string) => {
+    setActiveThread(id);
+    onMobileClose();
+  };
+
+  const pickProject = (id: string) => {
+    setActiveProject(id);
+    onMobileClose();
+  };
+
   const onImportToCurrentChat = async (list: FileList | null) => {
     if (!list?.length || !workspaceId) return;
     setImporting(true);
@@ -104,7 +118,16 @@ export function Sidebar({
   };
 
   return (
-    <aside className="w-[280px] shrink-0 h-full flex flex-col nexo-glass bg-nexo-sidebar border border-nexo-border rounded-2xl overflow-hidden shadow-sm transition-colors duration-300">
+    <aside
+      className={clsx(
+        "shrink-0 h-full flex flex-col nexo-glass bg-nexo-sidebar border border-nexo-border rounded-2xl overflow-hidden shadow-sm transition-transform duration-300 ease-out",
+        "w-[min(100vw-1rem,280px)] max-lg:fixed max-lg:left-2 max-lg:top-2 max-lg:bottom-2 max-lg:z-40 max-lg:h-auto",
+        mobileOpen
+          ? "max-lg:translate-x-0 max-lg:pointer-events-auto"
+          : "max-lg:-translate-x-[110%] max-lg:pointer-events-none",
+        "lg:relative lg:w-[280px] lg:translate-x-0 lg:pointer-events-auto"
+      )}
+    >
       <div className="p-5 border-b border-nexo-border">
         <div className="flex items-center gap-3">
           <div className="h-11 w-11 shrink-0 rounded-xl ring-1 ring-nexo-border bg-nexo-composer/50 flex items-center justify-center p-1.5 overflow-hidden">
@@ -128,7 +151,10 @@ export function Sidebar({
       <div className="px-3 pt-3 space-y-1.5">
         <button
           type="button"
-          onClick={() => newThread()}
+          onClick={() => {
+            newThread();
+            onMobileClose();
+          }}
           className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-[13px] font-semibold nexo-btn-primary transition-all duration-200"
         >
           <MessageSquarePlus className="w-4 h-4" />
@@ -208,7 +234,7 @@ export function Sidebar({
                 <li key={p.id} className="flex gap-0.5">
                   <button
                     type="button"
-                    onClick={() => setActiveProject(p.id)}
+                    onClick={() => pickProject(p.id)}
                     className={clsx(
                       "flex-1 flex items-center gap-2 px-2.5 py-2 rounded-lg text-[13px] text-left transition-all duration-200",
                       p.id === activeProjectId
@@ -222,7 +248,10 @@ export function Sidebar({
                   <button
                     type="button"
                     title="New chat in this folder"
-                    onClick={() => newThreadInProject(p.id)}
+                    onClick={() => {
+                      newThreadInProject(p.id);
+                      onMobileClose();
+                    }}
                     className="shrink-0 px-2 rounded-lg text-nexo-muted hover:bg-nexo-hover hover:text-nexo-brand"
                   >
                     <MessageSquarePlus className="w-3.5 h-3.5" />
@@ -253,7 +282,7 @@ export function Sidebar({
             <li key={p.id}>
               <button
                 type="button"
-                onClick={() => setActiveProject(p.id)}
+                onClick={() => pickProject(p.id)}
                 className={clsx(
                   "w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[13px] text-left transition-all duration-200",
                   p.id === activeProjectId
@@ -294,7 +323,7 @@ export function Sidebar({
             <li key={t.id} className="group flex items-center gap-0.5">
               <button
                 type="button"
-                onClick={() => setActiveThread(t.id)}
+                onClick={() => pickThread(t.id)}
                 className={clsx(
                   "flex-1 min-w-0 text-left px-2.5 py-2 rounded-lg text-[13px] transition-all duration-200 truncate",
                   t.id === activeThreadId
@@ -359,7 +388,7 @@ export function Sidebar({
           className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-[12px] text-nexo-muted hover:text-nexo-fg hover:bg-nexo-hover transition-all"
         >
           <LogOut className="w-3.5 h-3.5" />
-          Sign out &amp; settings
+          Sign out
         </button>
       </div>
     </aside>

@@ -37,6 +37,22 @@ body,
   color: var(--nexo-fg);
 }
 
+body {
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+}
+
+@layer utilities {
+  .nexo-tap {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .pb-safe {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+}
+
 .nexo-app-bg {
   background-color: var(--nexo-bg);
   background-image:
@@ -143,7 +159,16 @@ body,
   border: 1px solid var(--nexo-border);
   background: color-mix(in srgb, var(--nexo-composer) 80%, #000 20%);
   overflow-x: auto;
-  font-size: 13px;
+  font-size: 12px;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 640px) {
+  .prose-chat {
+    font-size: 13px;
+    overflow-wrap: anywhere;
+  }
 }
 
 .prose-chat code {

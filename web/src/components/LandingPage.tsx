@@ -92,7 +92,7 @@ export function LandingPage({ onAuthenticated }: LandingPageProps) {
   };
 
   return (
-    <div className="h-dvh min-h-[600px] flex flex-col nexo-app-bg overflow-hidden relative">
+    <div className="min-h-dvh flex flex-col nexo-app-bg overflow-x-hidden overflow-y-auto relative">
       <div
         className="pointer-events-none absolute inset-0 opacity-40"
         aria-hidden
@@ -136,8 +136,8 @@ export function LandingPage({ onAuthenticated }: LandingPageProps) {
         </p>
       </header>
 
-      <main className="relative z-10 flex-1 min-h-0 flex items-center justify-center px-6 lg:px-10 py-6 lg:py-8">
-        <div className="w-full max-w-6xl grid lg:grid-cols-[1.05fr_0.95fr] gap-10 lg:gap-14 items-center">
+      <main className="relative z-10 flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-10 py-6 lg:py-8">
+        <div className="w-full max-w-6xl grid lg:grid-cols-[1.05fr_0.95fr] gap-8 lg:gap-14 items-center">
           <div className="space-y-8">
             <div>
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium border border-nexo-border bg-nexo-composer/60 text-nexo-muted mb-5">
@@ -154,7 +154,7 @@ export function LandingPage({ onAuthenticated }: LandingPageProps) {
               </p>
             </div>
 
-            <div className="grid sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {HIGHLIGHTS.map(({ icon: Icon, title, desc }) => (
                 <div
                   key={title}

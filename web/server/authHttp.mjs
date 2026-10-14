@@ -1,10 +1,12 @@
 import {
   authenticateUser,
+  canUserManageSettings,
   createGuestSessionUser,
   createSession,
   destroySession,
   findOrCreateGoogleUser,
   getSession,
+  loadStore,
   registerUser,
 } from "./dataStore.mjs";
 import {
@@ -74,6 +76,16 @@ function sessionPayload(session) {
   };
 }
 
+function sessionPayloadForUserId(userId) {
+  const user = loadStore().users.find((u) => u.id === userId);
+  if (!user) return { ok: false, error: "User not found" };
+  return sessionPayload({
+    email: user.email,
+    isGuest: false,
+    canManageSettings: canUserManageSettings(user),
+  });
+}
+
 export function handleAuthLogin(req, res, sendJson, readBody) {
   return readBody(req).then((raw) => {
     let body = {};
@@ -86,7 +98,7 @@ export function handleAuthLogin(req, res, sendJson, readBody) {
     if (!user) return sendJson(res, 401, { error: "Invalid email or password" });
     const token = createSession(user.id);
     setSessionCookie(res, token, req);
-    return sendJson(res, 200, sessionPayload({ ...user, isGuest: false, canManageSettings: true }));
+    return sendJson(res, 200, sessionPayloadForUserId(user.id));
   });
 }
 
@@ -102,7 +114,7 @@ export function handleAuthRegister(req, res, sendJson, readBody) {
     if (!result.ok) return sendJson(res, 400, { error: result.error });
     const token = createSession(result.user.id);
     setSessionCookie(res, token, req);
-    return sendJson(res, 200, sessionPayload({ ...result.user, isGuest: false, canManageSettings: true }));
+    return sendJson(res, 200, sessionPayloadForUserId(result.user.id));
   });
 }
 

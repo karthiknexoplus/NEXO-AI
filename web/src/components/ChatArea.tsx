@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { ArrowUp, Loader2, Square } from "lucide-react";
+import { ArrowUp, FileCode2, Loader2, Menu, Square } from "lucide-react";
 import clsx from "clsx";
 import {
   abortIntelligenceChat,
@@ -18,9 +18,10 @@ import { useUiStore } from "../store/uiStore";
 
 interface ChatAreaProps {
   modes: IntelligenceModeOption[];
+  onOpenSidebar?: () => void;
 }
 
-export function ChatArea({ modes }: ChatAreaProps) {
+export function ChatArea({ modes, onOpenSidebar }: ChatAreaProps) {
   const {
     threads,
     activeThreadId,
@@ -157,11 +158,31 @@ export function ChatArea({ modes }: ChatAreaProps) {
 
   return (
     <main className="flex-1 flex flex-col min-w-0 nexo-glass bg-nexo-panel border border-nexo-border rounded-2xl overflow-hidden transition-colors duration-300">
-      <header className="h-14 shrink-0 flex items-center justify-between px-6 border-b border-nexo-border gap-3">
-        <h1 className="font-display text-[14px] font-semibold text-nexo-fg truncate min-w-0 tracking-tight">
-          {thread?.title ?? "Workspace"}
-        </h1>
-        <div className="flex items-center gap-0.5 p-1 rounded-xl bg-nexo-composer/80 border border-nexo-border shrink-0">
+      <header className="shrink-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-3 sm:px-6 py-3 sm:py-0 sm:h-14 border-b border-nexo-border">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          {onOpenSidebar && (
+            <button
+              type="button"
+              onClick={onOpenSidebar}
+              className="lg:hidden shrink-0 p-2 -ml-1 rounded-xl hover:bg-nexo-hover text-nexo-muted"
+              aria-label="Open menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+          )}
+          <h1 className="font-display text-[13px] sm:text-[14px] font-semibold text-nexo-fg truncate min-w-0 tracking-tight">
+            {thread?.title ?? "Workspace"}
+          </h1>
+          <button
+            type="button"
+            onClick={() => setCodePanelOpen(true)}
+            className="lg:hidden shrink-0 ml-auto p-2 rounded-xl hover:bg-nexo-hover text-nexo-muted"
+            aria-label="Open project files"
+          >
+            <FileCode2 className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="flex items-center gap-0.5 p-0.5 sm:p-1 rounded-xl bg-nexo-composer/80 border border-nexo-border shrink-0 self-end sm:self-auto overflow-x-auto max-w-full">
           {modes.map((m) => (
             <button
               key={m.id}
@@ -169,7 +190,7 @@ export function ChatArea({ modes }: ChatAreaProps) {
               title={m.hint}
               onClick={() => setIntelligenceMode(m.id as IntelligenceMode)}
               className={clsx(
-                "px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all duration-200",
+                "px-2.5 sm:px-3 py-1.5 rounded-lg text-[10px] sm:text-[11px] font-semibold transition-all duration-200 whitespace-nowrap",
                 intelligenceMode === m.id
                   ? "nexo-pill-active"
                   : "text-nexo-muted hover:text-nexo-fg hover:bg-nexo-hover"
@@ -206,7 +227,7 @@ export function ChatArea({ modes }: ChatAreaProps) {
       )}
 
       <div className="flex-1 overflow-y-auto scroll-smooth">
-        <div className="max-w-3xl mx-auto px-6 py-8 w-full">
+        <div className="max-w-3xl mx-auto px-3 sm:px-6 py-6 sm:py-8 w-full">
           {!thread?.messages.length && (
             <div className="pt-16 pb-10 text-center animate-fade-in">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium border border-nexo-border bg-nexo-composer/60 text-nexo-muted mb-6">
@@ -280,7 +301,7 @@ export function ChatArea({ modes }: ChatAreaProps) {
         </div>
       </div>
 
-      <div className="shrink-0 p-5 pb-3">
+      <div className="shrink-0 p-3 sm:p-5 pb-safe">
         <div className="max-w-3xl mx-auto">
           <div
             className={clsx(

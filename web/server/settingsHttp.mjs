@@ -30,7 +30,7 @@ function requireSettingsAdmin(req, res, sendJson) {
   const session = requireAuth(req, res, sendJson);
   if (!session) return null;
   if (!session.canManageSettings) {
-    sendJson(res, 403, { error: "Sign in with a full account to change settings" });
+    sendJson(res, 403, { error: "Only the studio admin can change server settings" });
     return null;
   }
   return session;
