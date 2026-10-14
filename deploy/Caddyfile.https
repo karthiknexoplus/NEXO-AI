@@ -1,0 +1,8 @@
+# Use after HTTP works and TLS is issued (Caddy auto-HTTPS or certbot paths in README).
+{
+	email admin@nexoplus.in
+}
+
+ai.nexoplus.in {
+	reverse_proxy 127.0.0.1:3080
+}

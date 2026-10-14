@@ -79,9 +79,25 @@ Do **not** change apex/`www` records that point to Netlify. Wait 5–30 minutes 
 
 ### 2. VPS firewall (AICCloud)
 
-Open **TCP 80** and **443** (standard HTTPS). You can keep NEXOPLUS on **3080** internally; Caddy listens on 80/443.
+Open **TCP 80** and **443** (and **3080** only if you skip nginx). NEXOPLUS stays on **3080** internally.
 
-### 3. Caddy on the VPS (free HTTPS)
+### 3. Nginx (recommended — same as bharathherbal on your VPS)
+
+If **bharathherbal.com** already runs on this server with **nginx + certbot**, use the same pattern for NEXO:
+
+```bash
+cd ~/NEXO-AI
+git pull
+chmod +x deploy/install-nginx.sh deploy/install-systemd.sh
+CERTBOT_EMAIL=you@nexoplus.in ./deploy/install-nginx.sh
+# or HTTPS manually: sudo certbot --nginx -d ai.nexoplus.in
+```
+
+This stops **Caddy**, installs **nginx**, proxies **ai.nexoplus.in** → `127.0.0.1:3080`, and runs **certbot** like your bharath site.
+
+Compare with bharath: `ls /etc/nginx/sites-enabled/` and `cat /etc/nginx/sites-enabled/*bharath*`.
+
+### 3b. Caddy (alternative)
 
 ```bash
 sudo apt-get update && sudo apt-get install -y debian-keyring debian-archive-keyring apt-transport-https curl
@@ -99,19 +115,41 @@ Ensure `nexoplus-web` is running on **3080** (`systemctl status nexoplus-web`).
 
 Visit **https://ai.nexoplus.in** (Caddy obtains a Let’s Encrypt certificate automatically).
 
-If Let’s Encrypt fails with `tls: internal error`, Caddy may be redirecting HTTP→HTTPS before a cert exists. Reset and reload:
+**First launch (recommended):** the default `deploy/Caddyfile` serves **HTTP only** so you avoid a redirect loop while no certificate exists. Open **http://ai.nexoplus.in** (not `https` yet).
 
 ```bash
 sudo cp ~/NEXO-AI/deploy/Caddyfile /etc/caddy/Caddyfile
 sudo systemctl stop caddy
-sudo rm -rf /var/lib/caddy/.local/share/caddy
+sudo rm -rf /var/lib/caddy/.config/caddy /var/lib/caddy/.local/share/caddy
 sudo systemctl start caddy
-sleep 15
-sudo journalctl -u caddy -n 20 --no-pager
-curl -sI https://ai.nexoplus.in | head -5
+curl -sI http://ai.nexoplus.in/ | head -5   # expect 200, not 308
 ```
 
-After HTTPS works, you may remove `auto_https disable_redirects` from the global block if you want `http://` to redirect to `https://`.
+**HTTPS with Certbot + Netlify DNS** (do not press Enter in certbot until TXT exists):
+
+1. Netlify → **Domains** → **nexoplus.in** → **DNS** → **Add record**  
+   - Type: **TXT**  
+   - Name: `_acme-challenge.ai` (Netlify may show as `_acme-challenge.ai.nexoplus.in`)  
+   - Value: paste the string certbot prints (a **new** value each run)
+
+2. Wait 2–5 minutes, then on the VPS:
+
+```bash
+dig +short TXT _acme-challenge.ai.nexoplus.in
+```
+
+You must see the quoted TXT value before continuing certbot.
+
+```bash
+sudo certbot certonly --manual --preferred-challenges dns -d ai.nexoplus.in
+# Only press Enter after dig shows the TXT record
+sudo cp ~/NEXO-AI/deploy/Caddyfile.certbot /etc/caddy/Caddyfile
+sudo systemctl restart caddy
+```
+
+Open **https://ai.nexoplus.in**.
+
+If certbot says **NXDOMAIN**, the TXT was missing or DNS for `nexoplus.in` is not managed in Netlify (`dig NS nexoplus.in` — nameservers should be Netlify if you edit DNS there).
 
 ## Dev
 

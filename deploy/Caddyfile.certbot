@@ -1,0 +1,9 @@
+# Use after: sudo certbot certonly --manual --preferred-challenges dns -d ai.nexoplus.in
+{
+	auto_https off
+}
+
+ai.nexoplus.in {
+	tls /etc/letsencrypt/live/ai.nexoplus.in/fullchain.pem /etc/letsencrypt/live/ai.nexoplus.in/privkey.pem
+	reverse_proxy 127.0.0.1:3080
+}
