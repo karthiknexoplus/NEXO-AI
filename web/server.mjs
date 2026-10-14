@@ -22,7 +22,7 @@ When generating files, ALWAYS use fences with the file path on the first line:
 Be concise. Production-ready code. Use path fences for every file you create.`;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PORT = Number(process.env.PORT || 3000);
+const PORT = Number(process.env.PORT || 3080);
 const OLLAMA_HOST = process.env.OLLAMA_HOST || "http://127.0.0.1:11434";
 const WORKSPACE_ROOT = path.resolve(
   process.env.WORKSPACE_ROOT || path.join(__dirname, "workspace")
@@ -271,6 +271,17 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, () => {
+server.on("error", (err) => {
+  if (err && err.code === "EADDRINUSE") {
+    console.error(
+      `❌ Port ${PORT} is already in use. Stop the other process or run: PORT=${PORT + 1} ./setup.sh`
+    );
+    process.exit(1);
+  }
+  console.error(err);
+  process.exit(1);
+});
+
+server.listen(PORT, "0.0.0.0", () => {
   console.log(`NEXOPLUS ready → http://0.0.0.0:${PORT}`);
 });

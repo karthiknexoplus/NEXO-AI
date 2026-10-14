@@ -13,12 +13,12 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:
-      PORT: 3000
+      PORT: 3080
       OLLAMA_HOST: http://ollama:11434
       WORKSPACE_ROOT: /app/workspace
       NEXO_MODEL: qwen2.5-coder
     ports:
-      - "3000:3000"
+      - "3080:3080"
     volumes:
       - nexo_workspace:/app/workspace
     depends_on:

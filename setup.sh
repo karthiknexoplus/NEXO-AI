@@ -4,7 +4,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 MODEL="${NEXO_MODEL:-qwen2.5-coder}"
-PORT="${PORT:-3000}"
+PORT="${PORT:-3080}"
 
 run_as_root() {
   if [[ "$(id -u)" -eq 0 ]]; then
@@ -85,6 +85,37 @@ echo "→ Building NEXOPLUS web app…"
 npm run build
 
 mkdir -p "${ROOT}/web/workspace"
+
+port_in_use() {
+  local p="$1"
+  if command -v ss >/dev/null 2>&1; then
+    ss -tln 2>/dev/null | grep -q ":${p} "
+    return $?
+  fi
+  if command -v lsof >/dev/null 2>&1; then
+    lsof -i ":${p}" -sTCP:LISTEN >/dev/null 2>&1
+    return $?
+  fi
+  return 1
+}
+
+pick_available_port() {
+  local p="${PORT}"
+  local tries=0
+  while port_in_use "${p}"; do
+    echo "⚠ Port ${p} is already in use — trying $((p + 1))…"
+    p=$((p + 1))
+    tries=$((tries + 1))
+    if [[ "${tries}" -gt 20 ]]; then
+      echo "❌ Could not find a free port. Set PORT manually: PORT=3090 ./setup.sh"
+      exit 1
+    fi
+  done
+  PORT="${p}"
+  export PORT
+}
+
+pick_available_port
 
 echo "→ Starting server on port ${PORT}…"
 export PORT

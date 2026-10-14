@@ -11,7 +11,7 @@ chmod +x setup.sh
 ./setup.sh
 ```
 
-Opens **http://localhost:3000** (set `PORT` for cloud).
+Opens **http://localhost:3080** (auto-picks next free port if busy; override with `PORT=3090`).
 
 ## Docker (public cloud)
 
@@ -20,7 +20,7 @@ docker compose up -d --build
 # First time: docker compose exec ollama ollama pull $NEXO_MODEL
 ```
 
-Expose port **3000** behind nginx/Caddy with HTTPS.
+Expose port **3080** (or your `PORT`) behind nginx/Caddy with HTTPS.
 
 ## Dev
 
