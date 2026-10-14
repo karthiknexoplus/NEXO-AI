@@ -6,6 +6,8 @@ export interface IntelligenceModeOption {
   hint: string;
 }
 
+import { shouldDropStreamToken } from "./sanitizeAssistant";
+
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
@@ -73,7 +75,7 @@ export async function streamIntelligenceChat(
           choices?: Array<{ delta?: { content?: string; reasoning?: string } }>;
         };
         const token = parsed.choices?.[0]?.delta?.content;
-        if (token) onToken(token);
+        if (token && !shouldDropStreamToken(token)) onToken(token);
       } catch {
         /* skip */
       }

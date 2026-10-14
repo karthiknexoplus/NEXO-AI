@@ -8,6 +8,11 @@ import {
   type IntelligenceMode,
   type IntelligenceModeOption,
 } from "../lib/intelligence";
+import {
+  isFailedAssistantReply,
+  STUB_REPLY_MESSAGE,
+  stripAssistantLeaks,
+} from "../lib/sanitizeAssistant";
 import { applyGeneratedFiles } from "../lib/workspace";
 import { useChatStore, type Message } from "../store/chatStore";
 import { useUiStore } from "../store/uiStore";
@@ -76,18 +81,38 @@ export function ChatArea({ modes }: ChatAreaProps) {
         .map((m) => ({ role: m.role, content: m.content })) ?? [];
 
     try {
-      let acc = "";
-      await streamIntelligenceChat(
-        history.map((m) => ({
-          role: m.role as "user" | "assistant",
-          content: m.content,
-        })),
-        intelligenceMode,
-        (token) => {
+      const chatHistory = history.map((m) => ({
+        role: m.role as "user" | "assistant",
+        content: m.content,
+      }));
+
+      const runStream = async (messages: typeof chatHistory) => {
+        let acc = "";
+        await streamIntelligenceChat(messages, intelligenceMode, (token) => {
           acc += token;
-          updateAssistant(threadId!, assistantId, acc);
-        }
-      );
+          updateAssistant(threadId!, assistantId, stripAssistantLeaks(acc));
+        });
+        return stripAssistantLeaks(acc);
+      };
+
+      let acc = await runStream(chatHistory);
+      if (isFailedAssistantReply(acc)) {
+        acc = await runStream([
+          ...chatHistory,
+          {
+            role: "user",
+            content:
+              `${text}\n\nReply as NEXOPLUS with the full files in path code fences (e.g. \`\`\`demo-project/README.md). No safety labels.`,
+          },
+        ]);
+      }
+
+      if (isFailedAssistantReply(acc)) {
+        updateAssistant(threadId!, assistantId, STUB_REPLY_MESSAGE);
+        return;
+      }
+
+      updateAssistant(threadId!, assistantId, acc);
 
       try {
         const written = await applyGeneratedFiles(acc, activeProjectId);

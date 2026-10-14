@@ -10,6 +10,7 @@ import {
   resolveCloudModel,
 } from "./server/cloudProvider.mjs";
 import { publicModes, resolveModel } from "./server/models.mjs";
+import { streamSanitizedSseToClient } from "./server/sanitizeStream.mjs";
 import {
   handleClearProject,
   handleDownloadZip,
@@ -227,7 +228,7 @@ async function handleIntelligenceChat(req, res) {
       body: JSON.stringify(cloudBody),
       signal: AbortSignal.timeout(timeoutMs),
     });
-    const streamed = await streamUpstreamToClient(res, upstream);
+    let streamed = await streamSanitizedSseToClient(res, upstream);
     if (streamed.ok) return;
     console.error(
       "[nexoplus] cloud chat failed",
@@ -245,7 +246,7 @@ async function handleIntelligenceChat(req, res) {
     upstream = await fetchOllamaChat(mode, messages);
   }
 
-  const streamed = await streamUpstreamToClient(res, upstream);
+  const streamed = await streamSanitizedSseToClient(res, upstream);
   if (streamed.ok) return;
 
   const text = streamed.text || "";
