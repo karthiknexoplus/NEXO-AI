@@ -28,6 +28,13 @@ if [[ -d /etc/nginx/sites-enabled ]]; then
 	run_as_root ls -1 /etc/nginx/sites-enabled/ 2>/dev/null || true
 fi
 
+# Free port 80/443 before installing or starting nginx
+if systemctl is-active --quiet caddy 2>/dev/null; then
+	echo "→ Stopping Caddy (nginx needs ports 80/443)…"
+	run_as_root systemctl stop caddy
+	run_as_root systemctl disable caddy
+fi
+
 run_as_root apt-get update -qq
 run_as_root apt-get install -y nginx certbot python3-certbot-nginx
 
@@ -45,13 +52,6 @@ fi
 run_as_root systemctl enable nexoplus-web 2>/dev/null || true
 run_as_root systemctl restart nexoplus-web
 
-# Caddy conflicts on :80 / :443
-if systemctl is-active --quiet caddy 2>/dev/null; then
-	echo "→ Stopping Caddy (nginx will use ports 80/443)…"
-	run_as_root systemctl stop caddy
-	run_as_root systemctl disable caddy
-fi
-
 sed "s/@DOMAIN@/${DOMAIN}/g" "${ROOT}/deploy/nginx-ai.nexoplus.in.conf" | run_as_root tee "${AVAILABLE}" >/dev/null
 run_as_root ln -sf "${AVAILABLE}" "${ENABLED}"
 
@@ -62,7 +62,11 @@ fi
 
 run_as_root nginx -t
 run_as_root systemctl enable nginx
-run_as_root systemctl reload nginx
+if ! run_as_root systemctl restart nginx; then
+	echo "❌ nginx failed to start. Check what holds port 80:"
+	run_as_root ss -tlnp | grep -E ':80 |:443 ' || true
+	exit 1
+fi
 
 echo ""
 echo "→ HTTP proxy ready. Test:"
