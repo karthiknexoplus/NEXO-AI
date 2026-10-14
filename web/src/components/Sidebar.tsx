@@ -7,6 +7,7 @@ import {
   Moon,
   Rocket,
   Search,
+  Settings,
   Sun,
   LogOut,
   Trash2,
@@ -22,9 +23,17 @@ interface SidebarProps {
   onBuildMyApp: () => void;
   onDownloadZip: () => void;
   onSignOut: () => void;
+  onOpenSettings?: () => void;
+  userEmail?: string;
 }
 
-export function Sidebar({ onBuildMyApp, onDownloadZip, onSignOut }: SidebarProps) {
+export function Sidebar({
+  onBuildMyApp,
+  onDownloadZip,
+  onSignOut,
+  onOpenSettings,
+  userEmail,
+}: SidebarProps) {
   const {
     projects,
     threads,
@@ -315,6 +324,21 @@ export function Sidebar({ onBuildMyApp, onDownloadZip, onSignOut }: SidebarProps
       </div>
 
       <div className="p-3 border-t border-nexo-border space-y-2">
+        {userEmail && (
+          <p className="text-[10px] text-nexo-muted truncate px-1" title={userEmail}>
+            {userEmail}
+          </p>
+        )}
+        {onOpenSettings && (
+          <button
+            type="button"
+            onClick={onOpenSettings}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-[12px] text-nexo-muted hover:text-nexo-fg hover:bg-nexo-hover transition-all"
+          >
+            <Settings className="w-3.5 h-3.5" />
+            Studio settings
+          </button>
+        )}
         <div className="flex items-center justify-between">
           <span className="text-[11px] text-nexo-muted">Theme</span>
           <button

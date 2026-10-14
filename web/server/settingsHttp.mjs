@@ -1,9 +1,12 @@
 import {
   getGithubSettings,
+  getOAuthSettings,
   getProviderSettings,
   publicGithubSettings,
+  publicOAuthSettings,
   publicProviderSettings,
   setGithubSettings,
+  setOAuthSettings,
   setProviderSettings,
 } from "./dataStore.mjs";
 import { requireAuth } from "./authHttp.mjs";
@@ -23,14 +26,24 @@ const ALLOWED_KEYS = new Set([
   "cloudTimeoutMs",
 ]);
 
+function requireSettingsAdmin(req, res, sendJson) {
+  const session = requireAuth(req, res, sendJson);
+  if (!session) return null;
+  if (!session.canManageSettings) {
+    sendJson(res, 403, { error: "Sign in with a full account to change settings" });
+    return null;
+  }
+  return session;
+}
+
 export function handleSettingsProvidersGet(req, res, sendJson) {
-  if (!requireAuth(req, res, sendJson)) return;
+  if (!requireSettingsAdmin(req, res, sendJson)) return;
   const providers = getProviderSettings();
   return sendJson(res, 200, publicProviderSettings(providers));
 }
 
 export async function handleSettingsProvidersPut(req, res, sendJson, readBody) {
-  if (!requireAuth(req, res, sendJson)) return;
+  if (!requireSettingsAdmin(req, res, sendJson)) return;
   const raw = await readBody(req);
   let body = {};
   try {
@@ -51,12 +64,12 @@ export async function handleSettingsProvidersPut(req, res, sendJson, readBody) {
 }
 
 export function handleSettingsGithubGet(req, res, sendJson) {
-  if (!requireAuth(req, res, sendJson)) return;
+  if (!requireSettingsAdmin(req, res, sendJson)) return;
   return sendJson(res, 200, publicGithubSettings(getGithubSettings()));
 }
 
 export async function handleSettingsGithubPut(req, res, sendJson, readBody) {
-  if (!requireAuth(req, res, sendJson)) return;
+  if (!requireSettingsAdmin(req, res, sendJson)) return;
   const raw = await readBody(req);
   let body = {};
   try {
@@ -71,4 +84,27 @@ export async function handleSettingsGithubPut(req, res, sendJson, readBody) {
   }
   const updated = setGithubSettings(patch);
   return sendJson(res, 200, publicGithubSettings(updated));
+}
+
+export function handleSettingsOAuthGet(req, res, sendJson) {
+  if (!requireSettingsAdmin(req, res, sendJson)) return;
+  return sendJson(res, 200, publicOAuthSettings(getOAuthSettings()));
+}
+
+export async function handleSettingsOAuthPut(req, res, sendJson, readBody) {
+  if (!requireSettingsAdmin(req, res, sendJson)) return;
+  const raw = await readBody(req);
+  let body = {};
+  try {
+    body = JSON.parse(raw || "{}");
+  } catch {
+    return sendJson(res, 400, { error: "Invalid JSON" });
+  }
+  const patch = {};
+  if (typeof body.googleClientId === "string") patch.googleClientId = body.googleClientId;
+  if (typeof body.googleClientSecret === "string" && !body.googleClientSecret.includes("••••")) {
+    patch.googleClientSecret = body.googleClientSecret;
+  }
+  const updated = setOAuthSettings(patch);
+  return sendJson(res, 200, publicOAuthSettings(updated));
 }

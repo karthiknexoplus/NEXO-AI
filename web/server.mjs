@@ -4,9 +4,14 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { extractFilesFromMarkdown } from "./server/extractFiles.mjs";
 import {
+  handleAuthConfig,
+  handleAuthGuest,
   handleAuthLogin,
   handleAuthLogout,
   handleAuthMe,
+  handleAuthRegister,
+  handleGoogleCallback,
+  handleGoogleStart,
   requireAuth,
 } from "./server/authHttp.mjs";
 import {
@@ -27,6 +32,8 @@ import {
 import {
   handleSettingsGithubGet,
   handleSettingsGithubPut,
+  handleSettingsOAuthGet,
+  handleSettingsOAuthPut,
   handleSettingsProvidersGet,
   handleSettingsProvidersPut,
 } from "./server/settingsHttp.mjs";
@@ -358,6 +365,21 @@ const server = http.createServer(async (req, res) => {
     if (pathname === "/api/auth/me" && req.method === "GET") {
       return handleAuthMe(req, res, sendJson);
     }
+    if (pathname === "/api/auth/register" && req.method === "POST") {
+      return handleAuthRegister(req, res, sendJson, readBody);
+    }
+    if (pathname === "/api/auth/guest" && req.method === "POST") {
+      return handleAuthGuest(req, res, sendJson);
+    }
+    if (pathname === "/api/auth/config" && req.method === "GET") {
+      return handleAuthConfig(req, res, sendJson);
+    }
+    if (pathname === "/api/auth/google" && req.method === "GET") {
+      return handleGoogleStart(req, res);
+    }
+    if (pathname === "/api/auth/google/callback" && req.method === "GET") {
+      return handleGoogleCallback(req, res);
+    }
     if (pathname === "/api/settings/providers" && req.method === "GET") {
       return handleSettingsProvidersGet(req, res, sendJson);
     }
@@ -369,6 +391,12 @@ const server = http.createServer(async (req, res) => {
     }
     if (pathname === "/api/settings/github" && req.method === "PUT") {
       return handleSettingsGithubPut(req, res, sendJson, readBody);
+    }
+    if (pathname === "/api/settings/oauth" && req.method === "GET") {
+      return handleSettingsOAuthGet(req, res, sendJson);
+    }
+    if (pathname === "/api/settings/oauth" && req.method === "PUT") {
+      return handleSettingsOAuthPut(req, res, sendJson, readBody);
     }
     if (pathname === "/api/git/status" && req.method === "GET") {
       const projectId = url.searchParams.get("projectId");
@@ -390,7 +418,12 @@ const server = http.createServer(async (req, res) => {
     const isPublicApi =
       pathname === "/api/health" ||
       pathname === "/api/auth/login" ||
-      pathname === "/api/auth/me";
+      pathname === "/api/auth/register" ||
+      pathname === "/api/auth/guest" ||
+      pathname === "/api/auth/config" ||
+      pathname === "/api/auth/me" ||
+      pathname === "/api/auth/google" ||
+      pathname === "/api/auth/google/callback";
 
     if (!isPublicApi && pathname.startsWith("/api/")) {
       if (!requireAuth(req, res, sendJson)) return;

@@ -15,6 +15,11 @@ const DEFAULT_GITHUB = {
   username: "",
 };
 
+const DEFAULT_OAUTH = {
+  googleClientId: "",
+  googleClientSecret: "",
+};
+
 const DEFAULT_PROVIDERS = {
   activeProvider: "openrouter",
   openrouterApiKey: "",
@@ -49,6 +54,8 @@ function emptyStore() {
     sessions: {},
     providers: { ...DEFAULT_PROVIDERS },
     github: { ...DEFAULT_GITHUB },
+    oauth: { ...DEFAULT_OAUTH },
+    oauthStates: {},
   };
 }
 
@@ -67,6 +74,8 @@ export function loadStore() {
     }
     data.providers = { ...DEFAULT_PROVIDERS, ...data.providers };
     data.github = { ...DEFAULT_GITHUB, ...data.github };
+    data.oauth = { ...DEFAULT_OAUTH, ...data.oauth };
+    data.oauthStates = data.oauthStates || {};
     data.sessions = data.sessions || {};
     return data;
   } catch {
@@ -111,11 +120,11 @@ export function publicGithubSettings(github) {
   };
 }
 
-export function createSession(userId) {
+export function createSession(userId, extra = {}) {
   const store = loadStore();
   const token = randomBytes(32).toString("hex");
   const expires = Date.now() + 7 * 24 * 60 * 60 * 1000;
-  store.sessions[token] = { userId, expires };
+  store.sessions[token] = { userId, expires, ...extra };
   saveStore(store);
   return token;
 }
@@ -132,8 +141,23 @@ export function getSession(token) {
     return null;
   }
   const user = store.users.find((u) => u.id === s.userId);
-  if (!user) return null;
-  return { userId: user.id, email: user.email };
+  if (!user) {
+    if (s.userId?.startsWith("guest-")) {
+      return {
+        userId: s.userId,
+        email: s.guestLabel || "Guest",
+        isGuest: true,
+        canManageSettings: false,
+      };
+    }
+    return null;
+  }
+  return {
+    userId: user.id,
+    email: user.email,
+    isGuest: !!user.isGuest,
+    canManageSettings: !user.isGuest,
+  };
 }
 
 export function destroySession(token) {
@@ -147,8 +171,86 @@ export function destroySession(token) {
 export function authenticateUser(email, password) {
   const store = loadStore();
   const user = store.users.find((u) => u.email.toLowerCase() === email.toLowerCase());
-  if (!user || !verifyPassword(password, user.salt, user.hash)) return null;
+  if (!user || user.isGuest || !user.salt || !user.hash) return null;
+  if (!verifyPassword(password, user.salt, user.hash)) return null;
   return { id: user.id, email: user.email };
+}
+
+export function registerUser(email, password) {
+  const normalized = (email || "").trim().toLowerCase();
+  if (!normalized || !normalized.includes("@")) {
+    return { ok: false, error: "Enter a valid email" };
+  }
+  if (!password || password.length < 8) {
+    return { ok: false, error: "Password must be at least 8 characters" };
+  }
+  const store = loadStore();
+  if (store.users.some((u) => u.email.toLowerCase() === normalized)) {
+    return { ok: false, error: "An account with this email already exists" };
+  }
+  const { salt, hash } = hashPassword(password);
+  const user = {
+    id: `u-${Date.now()}`,
+    email: normalized,
+    salt,
+    hash,
+    createdAt: Date.now(),
+  };
+  store.users.push(user);
+  saveStore(store);
+  return { ok: true, user: { id: user.id, email: user.email } };
+}
+
+export function createGuestSessionUser() {
+  const id = `guest-${randomBytes(8).toString("hex")}`;
+  const label = `Guest ${id.slice(-4)}`;
+  return { id, label };
+}
+
+export function findOrCreateGoogleUser(email, googleId, name) {
+  const store = loadStore();
+  const normalized = email.toLowerCase();
+  let user = store.users.find(
+    (u) => u.googleId === googleId || u.email.toLowerCase() === normalized
+  );
+  if (!user) {
+    user = {
+      id: `u-${Date.now()}`,
+      email: normalized,
+      googleId,
+      name: name || normalized,
+      createdAt: Date.now(),
+      authProvider: "google",
+    };
+    store.users.push(user);
+    saveStore(store);
+  } else if (!user.googleId) {
+    user.googleId = googleId;
+    saveStore(store);
+  }
+  return { id: user.id, email: user.email };
+}
+
+export function getOAuthSettings() {
+  return { ...loadStore().oauth };
+}
+
+export function setOAuthSettings(patch) {
+  const store = loadStore();
+  store.oauth = { ...store.oauth, ...patch };
+  saveStore(store);
+  return getOAuthSettings();
+}
+
+export function publicOAuthSettings(oauth) {
+  const clientId = oauth.googleClientId || process.env.GOOGLE_CLIENT_ID || "";
+  const hasSecret = !!(oauth.googleClientSecret || process.env.GOOGLE_CLIENT_SECRET);
+  return {
+    googleClientId: clientId,
+    googleClientSecret: maskSecret(oauth.googleClientSecret),
+    googleEnabled: !!(clientId && (hasSecret || process.env.GOOGLE_CLIENT_SECRET)),
+    hasGoogleSecret: hasSecret,
+  };
 }
 
 export function maskSecret(value) {
