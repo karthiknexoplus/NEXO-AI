@@ -1,56 +1,66 @@
 /** Server-only: OpenAI-compatible cloud APIs (keys never sent to browser). */
 
+import { getProviderSettings } from "./dataStore.mjs";
 import { resolveMaxOutputTokens } from "./limits.mjs";
 
-export function intelligenceBackend() {
-  const forced = (process.env.NEXO_INTELLIGENCE_PROVIDER || "").toLowerCase();
-  if (forced === "ollama") return "ollama";
-  if (forced === "openrouter" && process.env.OPENROUTER_API_KEY) return "openrouter";
-  if (forced === "groq" && process.env.GROQ_API_KEY) return "groq";
-  if (forced === "opencode" && process.env.OPENCODE_ZEN_API_KEY) return "opencode";
-  if (forced === "custom" && process.env.NEXO_API_KEY && process.env.NEXO_OPENAI_BASE_URL) {
-    return "custom";
-  }
+function settings() {
+  const s = getProviderSettings();
+  return {
+    activeProvider: (s.activeProvider || "openrouter").toLowerCase(),
+    openrouterApiKey: s.openrouterApiKey || process.env.OPENROUTER_API_KEY || "",
+    groqApiKey: s.groqApiKey || process.env.GROQ_API_KEY || "",
+    opencodeZenApiKey: s.opencodeZenApiKey || process.env.OPENCODE_ZEN_API_KEY || "",
+    customApiKey: s.customApiKey || process.env.NEXO_API_KEY || "",
+    customBaseUrl: s.customBaseUrl || process.env.NEXO_OPENAI_BASE_URL || "",
+    ollamaHost: s.ollamaHost || process.env.OLLAMA_HOST || "http://127.0.0.1:11434",
+    ollamaFallback: s.ollamaFallback ?? true,
+    modelFast: s.modelFast || "openrouter/free",
+    modelSmart: s.modelSmart || "openrouter/free",
+    modelDeep: s.modelDeep || "openrouter/free",
+    cloudTimeoutMs: s.cloudTimeoutMs || Number(process.env.NEXO_CLOUD_TIMEOUT_MS || 300000),
+    publicUrl: process.env.NEXO_PUBLIC_URL || "https://ai.nexoplus.in",
+  };
+}
 
-  if (process.env.OPENROUTER_API_KEY) return "openrouter";
-  if (process.env.OPENCODE_ZEN_API_KEY) return "opencode";
-  if (process.env.GROQ_API_KEY) return "groq";
-  if (process.env.NEXO_API_KEY && process.env.NEXO_OPENAI_BASE_URL) return "custom";
+export function getCloudTimeoutMs() {
+  return settings().cloudTimeoutMs;
+}
+
+export function getOllamaHost() {
+  return settings().ollamaHost;
+}
+
+export function intelligenceBackend() {
+  const s = settings();
+  const pick = s.activeProvider;
+
+  if (pick === "ollama") return "ollama";
+  if (pick === "openrouter" && s.openrouterApiKey) return "openrouter";
+  if (pick === "groq" && s.groqApiKey) return "groq";
+  if (pick === "opencode" && s.opencodeZenApiKey) return "opencode";
+  if (pick === "custom" && s.customApiKey && s.customBaseUrl) return "custom";
+
+  if (s.openrouterApiKey) return "openrouter";
+  if (s.opencodeZenApiKey) return "opencode";
+  if (s.groqApiKey) return "groq";
+  if (s.customApiKey && s.customBaseUrl) return "custom";
   return "ollama";
 }
 
-const CLOUD_MODELS = {
-  openrouter: {
-    // Per-model :free slugs are often disabled per account; openrouter/free still works for many keys.
-    fast: process.env.NEXO_CLOUD_MODEL_FAST || "openrouter/free",
-    smart: process.env.NEXO_CLOUD_MODEL_SMART || "openrouter/free",
-    deep: process.env.NEXO_CLOUD_MODEL_DEEP || "openrouter/free",
-  },
-  groq: {
-    fast: process.env.NEXO_CLOUD_MODEL_FAST || "openai/gpt-oss-20b",
-    smart: process.env.NEXO_CLOUD_MODEL_SMART || "openai/gpt-oss-120b",
-    deep: process.env.NEXO_CLOUD_MODEL_DEEP || "openai/gpt-oss-120b",
-  },
-  opencode: {
-    // OpenCode Zen — model IDs from https://opencode.ai/zen/v1/models (chat/completions models)
-    fast: process.env.NEXO_CLOUD_MODEL_FAST || process.env.OPENCODE_ZEN_MODEL || "gpt-5.5",
-    smart: process.env.NEXO_CLOUD_MODEL_SMART || process.env.OPENCODE_ZEN_MODEL || "gpt-5.5",
-    deep: process.env.NEXO_CLOUD_MODEL_DEEP || process.env.OPENCODE_ZEN_MODEL || "gpt-5.5-pro",
-  },
-  custom: {
-    fast: process.env.NEXO_CLOUD_MODEL_FAST || process.env.NEXO_MODEL || "gpt-4o-mini",
-    smart: process.env.NEXO_CLOUD_MODEL_SMART || process.env.NEXO_MODEL || "gpt-4o-mini",
-    deep: process.env.NEXO_CLOUD_MODEL_DEEP || process.env.NEXO_MODEL || "gpt-4o",
-  },
-};
-
 export function resolveCloudModel(backend, mode) {
-  const table = CLOUD_MODELS[backend];
-  if (!table) return CLOUD_MODELS.openrouter.smart;
-  return table[mode] || table.smart;
+  const s = settings();
+  const table = {
+    openrouter: { fast: s.modelFast, smart: s.modelSmart, deep: s.modelDeep },
+    groq: { fast: s.modelFast, smart: s.modelSmart, deep: s.modelDeep },
+    opencode: { fast: s.modelFast, smart: s.modelSmart, deep: s.modelDeep },
+    custom: { fast: s.modelFast, smart: s.modelSmart, deep: s.modelDeep },
+  };
+  const t = table[backend] || table.openrouter;
+  return t[mode] || t.smart;
 }
 
 export function cloudChatRequest(backend, model, messages, mode) {
+  const s = settings();
   const temperature = mode === "fast" ? 0.15 : 0.22;
   const body = {
     model,
@@ -66,8 +76,8 @@ export function cloudChatRequest(backend, model, messages, mode) {
       headers: {
         "Content-Type": "application/json",
         Accept: "text/event-stream",
-        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        "HTTP-Referer": process.env.NEXO_PUBLIC_URL || "https://ai.nexoplus.in",
+        Authorization: `Bearer ${s.openrouterApiKey}`,
+        "HTTP-Referer": s.publicUrl,
         "X-Title": "NEXOPLUS Web",
       },
       body,
@@ -87,7 +97,7 @@ export function cloudChatRequest(backend, model, messages, mode) {
       headers: {
         "Content-Type": "application/json",
         Accept: "text/event-stream",
-        Authorization: `Bearer ${process.env.OPENCODE_ZEN_API_KEY}`,
+        Authorization: `Bearer ${s.opencodeZenApiKey}`,
       },
       body,
     };
@@ -99,26 +109,28 @@ export function cloudChatRequest(backend, model, messages, mode) {
       headers: {
         "Content-Type": "application/json",
         Accept: "text/event-stream",
-        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+        Authorization: `Bearer ${s.groqApiKey}`,
       },
       body,
     };
   }
 
-  const base = process.env.NEXO_OPENAI_BASE_URL.replace(/\/$/, "");
+  const base = s.customBaseUrl.replace(/\/$/, "");
   const url = base.endsWith("/chat/completions") ? base : `${base}/v1/chat/completions`;
   return {
     url,
     headers: {
       "Content-Type": "application/json",
       Accept: "text/event-stream",
-      Authorization: `Bearer ${process.env.NEXO_API_KEY}`,
+      Authorization: `Bearer ${s.customApiKey}`,
     },
     body,
   };
 }
 
 export function ollamaFallbackEnabled() {
+  const s = settings();
+  if (s.ollamaFallback === false) return false;
   const v = (process.env.NEXO_OLLAMA_FALLBACK || "true").toLowerCase();
   return v !== "0" && v !== "false" && v !== "no";
 }

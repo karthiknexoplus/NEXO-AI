@@ -1,8 +1,11 @@
+const fetchOpts: RequestInit = { credentials: "include" };
+
 export async function applyGeneratedFiles(
   content: string,
   projectId: string
 ): Promise<string[]> {
   const res = await fetch("/api/workspace/apply", {
+    ...fetchOpts,
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ content, projectId }),
@@ -17,6 +20,7 @@ export async function applyGeneratedFiles(
 
 export async function clearProjectWorkspace(projectId: string): Promise<void> {
   const res = await fetch("/api/workspace/clear", {
+    ...fetchOpts,
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ projectId }),
@@ -26,7 +30,8 @@ export async function clearProjectWorkspace(projectId: string): Promise<void> {
 
 export async function listProjectFiles(projectId: string): Promise<string[]> {
   const res = await fetch(
-    `/api/workspace/files?projectId=${encodeURIComponent(projectId)}`
+    `/api/workspace/files?projectId=${encodeURIComponent(projectId)}`,
+    fetchOpts
   );
   if (!res.ok) return [];
   const data = (await res.json()) as { files: string[] };
@@ -38,7 +43,8 @@ export async function readProjectFile(
   filePath: string
 ): Promise<string> {
   const res = await fetch(
-    `/api/workspace/file?projectId=${encodeURIComponent(projectId)}&path=${encodeURIComponent(filePath)}`
+    `/api/workspace/file?projectId=${encodeURIComponent(projectId)}&path=${encodeURIComponent(filePath)}`,
+    fetchOpts
   );
   if (!res.ok) throw new Error("Could not load file");
   const data = (await res.json()) as { content: string };
@@ -51,6 +57,7 @@ export async function saveProjectFile(
   content: string
 ): Promise<void> {
   const res = await fetch("/api/workspace/file", {
+    ...fetchOpts,
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ projectId, path: filePath, content }),
@@ -59,6 +66,15 @@ export async function saveProjectFile(
 }
 
 const IMPORT_SKIP = /(?:^|\/)(node_modules|\.git|dist|build|\.next)(?:\/|$)/;
+
+export function folderNameFromFileList(list: FileList): string {
+  const first = list[0];
+  if (!first) return "Imported folder";
+  const rel =
+    (first as File & { webkitRelativePath?: string }).webkitRelativePath || first.name;
+  const top = rel.replace(/\\/g, "/").split("/")[0];
+  return top || "Imported folder";
+}
 
 export async function importLocalFolder(
   projectId: string,
@@ -81,6 +97,7 @@ export async function importLocalFolder(
   if (files.length === 0) throw new Error("No text files to import");
 
   const res = await fetch("/api/workspace/import", {
+    ...fetchOpts,
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ projectId, files }),

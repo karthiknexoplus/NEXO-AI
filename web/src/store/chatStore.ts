@@ -17,10 +17,13 @@ export interface ChatThread {
   updatedAt: number;
 }
 
+export type ProjectKind = "default" | "imported";
+
 export interface Project {
   id: string;
   name: string;
   createdAt: number;
+  kind?: ProjectKind;
 }
 
 interface ChatState {
@@ -31,8 +34,10 @@ interface ChatState {
   intelligenceMode: "fast" | "smart" | "deep";
   setIntelligenceMode: (m: "fast" | "smart" | "deep") => void;
   newProject: (name: string) => void;
+  newImportedProject: (name: string) => string;
   setActiveProject: (id: string) => void;
   newThread: () => string;
+  newThreadInProject: (projectId: string) => string;
   setActiveThread: (id: string) => void;
   appendMessage: (threadId: string, msg: Message) => void;
   updateAssistant: (threadId: string, messageId: string, content: string) => void;
@@ -44,6 +49,7 @@ const defaultProject: Project = {
   id: "default",
   name: "My Workspace",
   createdAt: Date.now(),
+  kind: "default",
 };
 
 export const useChatStore = create<ChatState>()(
@@ -58,7 +64,12 @@ export const useChatStore = create<ChatState>()(
       setIntelligenceMode: (intelligenceMode) => set({ intelligenceMode }),
 
       newProject: (name) => {
-        const p: Project = { id: `p-${Date.now()}`, name, createdAt: Date.now() };
+        const p: Project = {
+          id: `p-${Date.now()}`,
+          name,
+          createdAt: Date.now(),
+          kind: "default",
+        };
         set((s) => ({
           projects: [p, ...s.projects],
           activeProjectId: p.id,
@@ -66,7 +77,25 @@ export const useChatStore = create<ChatState>()(
         }));
       },
 
-      setActiveProject: (id) => set({ activeProjectId: id, activeThreadId: null }),
+      newImportedProject: (name) => {
+        const p: Project = {
+          id: `p-${Date.now()}`,
+          name,
+          createdAt: Date.now(),
+          kind: "imported",
+        };
+        set((s) => ({
+          projects: [p, ...s.projects],
+          activeProjectId: p.id,
+          activeThreadId: null,
+        }));
+        return p.id;
+      },
+
+      setActiveProject: (id) => {
+        set({ activeProjectId: id, activeThreadId: null });
+        useUiStore.getState().bumpWorkspace();
+      },
 
       newThread: () => {
         const id = `t-${Date.now()}`;
@@ -81,10 +110,36 @@ export const useChatStore = create<ChatState>()(
           threads: [thread, ...s.threads],
           activeThreadId: id,
         }));
+        useUiStore.getState().bumpWorkspace();
         return id;
       },
 
-      setActiveThread: (id) => set({ activeThreadId: id }),
+      newThreadInProject: (projectId) => {
+        const id = `t-${Date.now()}`;
+        const thread: ChatThread = {
+          id,
+          projectId,
+          title: "New Chat",
+          messages: [],
+          updatedAt: Date.now(),
+        };
+        set((s) => ({
+          threads: [thread, ...s.threads],
+          activeProjectId: projectId,
+          activeThreadId: id,
+        }));
+        useUiStore.getState().bumpWorkspace();
+        return id;
+      },
+
+      setActiveThread: (id) => {
+        const thread = get().threads.find((t) => t.id === id);
+        set({
+          activeThreadId: id,
+          ...(thread ? { activeProjectId: thread.projectId } : {}),
+        });
+        useUiStore.getState().bumpWorkspace();
+      },
 
       appendMessage: (threadId, msg) =>
         set((s) => ({
@@ -124,10 +179,10 @@ export const useChatStore = create<ChatState>()(
         })),
 
       deleteThread: (threadId) => {
-        const projectId = get().activeProjectId;
-        const wasLastInProject =
-          get().threads.filter((t) => t.projectId === projectId).length === 1 &&
-          get().threads.some((t) => t.id === threadId && t.projectId === projectId);
+        const thread = get().threads.find((t) => t.id === threadId);
+        const project = thread
+          ? get().projects.find((p) => p.id === thread.projectId)
+          : null;
 
         set((s) => {
           const remaining = s.threads.filter((t) => t.id !== threadId);
@@ -139,8 +194,8 @@ export const useChatStore = create<ChatState>()(
           return { threads: remaining, activeThreadId };
         });
 
-        if (wasLastInProject) {
-          void clearProjectWorkspace(projectId).then(() => {
+        if (thread && project?.kind !== "imported") {
+          void clearProjectWorkspace(thread.id).then(() => {
             useUiStore.getState().bumpWorkspace();
           });
         }

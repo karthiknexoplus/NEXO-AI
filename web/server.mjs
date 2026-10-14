@@ -4,11 +4,32 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { extractFilesFromMarkdown } from "./server/extractFiles.mjs";
 import {
+  handleAuthLogin,
+  handleAuthLogout,
+  handleAuthMe,
+  requireAuth,
+} from "./server/authHttp.mjs";
+import {
   cloudChatRequest,
+  getCloudTimeoutMs,
+  getOllamaHost,
   intelligenceBackend,
   ollamaFallbackEnabled,
   resolveCloudModel,
 } from "./server/cloudProvider.mjs";
+import {
+  handleGitCommit,
+  handleGitInit,
+  handleGithubCreateRepo,
+  handleGitPush,
+  handleGitStatus,
+} from "./server/gitApiHttp.mjs";
+import {
+  handleSettingsGithubGet,
+  handleSettingsGithubPut,
+  handleSettingsProvidersGet,
+  handleSettingsProvidersPut,
+} from "./server/settingsHttp.mjs";
 import { publicModes, resolveModel } from "./server/models.mjs";
 import {
   maxRequestBodyBytes,
@@ -54,7 +75,9 @@ Be concise. Production-ready code. Use path fences for every file you create.`;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 3080);
-const OLLAMA_HOST = process.env.OLLAMA_HOST || "http://127.0.0.1:11434";
+function ollamaHost() {
+  return getOllamaHost();
+}
 const WORKSPACE_ROOT = path.resolve(
   process.env.WORKSPACE_ROOT || path.join(__dirname, "workspace")
 );
@@ -91,8 +114,9 @@ async function readBody(req) {
 }
 
 async function proxyOllama(req, res, urlPath) {
-  const target = `${OLLAMA_HOST}${urlPath}`;
-  const headers = { ...req.headers, host: new URL(OLLAMA_HOST).host };
+  const host = ollamaHost();
+  const target = `${host}${urlPath}`;
+  const headers = { ...req.headers, host: new URL(host).host };
   delete headers.connection;
 
   if (urlPath.includes("/v1/chat/completions") && req.method === "POST") {
@@ -206,7 +230,7 @@ async function fetchOllamaChat(mode, messages) {
     messages,
   };
   const timeoutMs = Number(process.env.NEXO_OLLAMA_TIMEOUT_MS || 180000);
-  return fetch(`${OLLAMA_HOST}/v1/chat/completions`, {
+  return fetch(`${ollamaHost()}/v1/chat/completions`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
     body: JSON.stringify(payload),
@@ -252,7 +276,7 @@ async function handleIntelligenceChat(req, res) {
   const messages = [{ role: "system", content: SYSTEM_PROMPT }, ...history];
 
   const backend = intelligenceBackend();
-  const timeoutMs = Number(process.env.NEXO_CLOUD_TIMEOUT_MS || 300000);
+  const timeoutMs = getCloudTimeoutMs();
 
   let upstream;
   if (backend !== "ollama") {
@@ -324,6 +348,53 @@ const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url || "/", `http://${req.headers.host}`);
     const pathname = url.pathname;
+
+    if (pathname === "/api/auth/login" && req.method === "POST") {
+      return handleAuthLogin(req, res, sendJson, readBody);
+    }
+    if (pathname === "/api/auth/logout" && req.method === "POST") {
+      return handleAuthLogout(res, sendJson, req);
+    }
+    if (pathname === "/api/auth/me" && req.method === "GET") {
+      return handleAuthMe(req, res, sendJson);
+    }
+    if (pathname === "/api/settings/providers" && req.method === "GET") {
+      return handleSettingsProvidersGet(req, res, sendJson);
+    }
+    if (pathname === "/api/settings/providers" && req.method === "PUT") {
+      return handleSettingsProvidersPut(req, res, sendJson, readBody);
+    }
+    if (pathname === "/api/settings/github" && req.method === "GET") {
+      return handleSettingsGithubGet(req, res, sendJson);
+    }
+    if (pathname === "/api/settings/github" && req.method === "PUT") {
+      return handleSettingsGithubPut(req, res, sendJson, readBody);
+    }
+    if (pathname === "/api/git/status" && req.method === "GET") {
+      const projectId = url.searchParams.get("projectId");
+      return handleGitStatus(req, res, sendJson, WORKSPACE_ROOT, projectId);
+    }
+    if (pathname === "/api/git/init" && req.method === "POST") {
+      return handleGitInit(req, res, sendJson, WORKSPACE_ROOT, readBody);
+    }
+    if (pathname === "/api/git/commit" && req.method === "POST") {
+      return handleGitCommit(req, res, sendJson, WORKSPACE_ROOT, readBody);
+    }
+    if (pathname === "/api/git/push" && req.method === "POST") {
+      return handleGitPush(req, res, sendJson, WORKSPACE_ROOT, readBody);
+    }
+    if (pathname === "/api/github/create-repo" && req.method === "POST") {
+      return handleGithubCreateRepo(req, res, sendJson, WORKSPACE_ROOT, readBody);
+    }
+
+    const isPublicApi =
+      pathname === "/api/health" ||
+      pathname === "/api/auth/login" ||
+      pathname === "/api/auth/me";
+
+    if (!isPublicApi && pathname.startsWith("/api/")) {
+      if (!requireAuth(req, res, sendJson)) return;
+    }
 
     if (pathname === "/api/intelligence/modes" && req.method === "GET") {
       return sendJson(res, 200, { modes: publicModes() });

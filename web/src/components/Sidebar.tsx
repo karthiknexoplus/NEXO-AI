@@ -8,10 +8,12 @@ import {
   Rocket,
   Search,
   Sun,
+  LogOut,
   Trash2,
 } from "lucide-react";
 import clsx from "clsx";
-import { importLocalFolder } from "../lib/workspace";
+import { folderNameFromFileList, importLocalFolder } from "../lib/workspace";
+import { resolveWorkspaceId } from "../lib/workspaceId";
 import { useChatStore } from "../store/chatStore";
 import { useThemeStore } from "../store/themeStore";
 import { useUiStore } from "../store/uiStore";
@@ -19,9 +21,10 @@ import { useUiStore } from "../store/uiStore";
 interface SidebarProps {
   onBuildMyApp: () => void;
   onDownloadZip: () => void;
+  onSignOut: () => void;
 }
 
-export function Sidebar({ onBuildMyApp, onDownloadZip }: SidebarProps) {
+export function Sidebar({ onBuildMyApp, onDownloadZip, onSignOut }: SidebarProps) {
   const {
     projects,
     threads,
@@ -29,15 +32,26 @@ export function Sidebar({ onBuildMyApp, onDownloadZip }: SidebarProps) {
     activeThreadId,
     setActiveProject,
     newThread,
+    newThreadInProject,
     setActiveThread,
     newProject,
+    newImportedProject,
     deleteThread,
   } = useChatStore();
   const { theme, toggle } = useThemeStore();
   const bumpWorkspace = useUiStore((s) => s.bumpWorkspace);
   const folderInputRef = useRef<HTMLInputElement>(null);
+  const chatImportRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
   const [chatQuery, setChatQuery] = useState("");
+
+  const defaultProjects = projects.filter((p) => p.kind !== "imported");
+  const importedProjects = projects.filter((p) => p.kind === "imported");
+
+  const workspaceId = resolveWorkspaceId(projects, activeProjectId, activeThreadId);
+  const activeProject = projects.find((p) => p.id === activeProjectId);
+  const canImportToChat =
+    activeProject?.kind !== "imported" && !!activeThreadId && !!workspaceId;
 
   const projectThreads = threads
     .filter((t) => t.projectId === activeProjectId)
@@ -47,19 +61,36 @@ export function Sidebar({ onBuildMyApp, onDownloadZip }: SidebarProps) {
         : true
     );
 
-  const onImportFolder = async (list: FileList | null) => {
+  const onImportAsNewFolder = async (list: FileList | null) => {
     if (!list?.length) return;
     setImporting(true);
     try {
-      const written = await importLocalFolder(activeProjectId, list);
+      const name = folderNameFromFileList(list);
+      const projectId = newImportedProject(name);
+      const written = await importLocalFolder(projectId, list);
+      newThreadInProject(projectId);
       bumpWorkspace();
-      window.alert(`Imported ${written.length} file(s) into your workspace.`);
+      window.alert(`Imported ${written.length} file(s) into folder "${name}". Start chatting to modify it.`);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Import failed";
-      window.alert(msg);
+      window.alert(e instanceof Error ? e.message : "Import failed");
     } finally {
       setImporting(false);
       if (folderInputRef.current) folderInputRef.current.value = "";
+    }
+  };
+
+  const onImportToCurrentChat = async (list: FileList | null) => {
+    if (!list?.length || !workspaceId) return;
+    setImporting(true);
+    try {
+      const written = await importLocalFolder(workspaceId, list);
+      bumpWorkspace();
+      window.alert(`Imported ${written.length} file(s) into this chat's workspace.`);
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : "Import failed");
+    } finally {
+      setImporting(false);
+      if (chatImportRef.current) chatImportRef.current.value = "";
     }
   };
 
@@ -116,21 +147,81 @@ export function Sidebar({ onBuildMyApp, onDownloadZip }: SidebarProps) {
           // @ts-expect-error webkitdirectory for folder pick
           webkitdirectory=""
           directory=""
-          onChange={(e) => void onImportFolder(e.target.files)}
+          onChange={(e) => void onImportAsNewFolder(e.target.files)}
         />
         <button
           type="button"
           disabled={importing}
           onClick={() => folderInputRef.current?.click()}
           className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-[13px] text-nexo-muted hover:bg-nexo-hover hover:text-nexo-fg transition-colors disabled:opacity-50"
-          title="Import a folder from your computer into the workspace"
+          title="Import a folder as its own workspace"
         >
           <FolderUp className="w-4 h-4" />
-          {importing ? "Importing…" : "Import folder"}
+          {importing ? "Importing…" : "Import folder (new workspace)"}
         </button>
+        {canImportToChat && (
+          <>
+            <input
+              ref={chatImportRef}
+              type="file"
+              className="hidden"
+              multiple
+              // @ts-expect-error webkitdirectory
+              webkitdirectory=""
+              directory=""
+              onChange={(e) => void onImportToCurrentChat(e.target.files)}
+            />
+            <button
+              type="button"
+              disabled={importing}
+              onClick={() => chatImportRef.current?.click()}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-[12px] text-nexo-muted hover:bg-nexo-hover hover:text-nexo-fg transition-colors disabled:opacity-50"
+            >
+              <FolderUp className="w-3.5 h-3.5" />
+              Import into this chat
+            </button>
+          </>
+        )}
       </div>
 
-      <div className="mt-4 px-3 flex-1 min-h-0 flex flex-col">
+      <div className="mt-4 px-3 flex-1 min-h-0 flex flex-col overflow-y-auto">
+        {importedProjects.length > 0 && (
+          <>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-nexo-muted">
+                Imported folders
+              </span>
+            </div>
+            <ul className="space-y-0.5 mb-4">
+              {importedProjects.map((p) => (
+                <li key={p.id} className="flex gap-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setActiveProject(p.id)}
+                    className={clsx(
+                      "flex-1 flex items-center gap-2 px-2.5 py-2 rounded-lg text-[13px] text-left transition-all duration-200",
+                      p.id === activeProjectId
+                        ? "bg-nexo-brand/15 text-nexo-fg ring-1 ring-nexo-brand/30"
+                        : "text-nexo-muted hover:bg-nexo-hover/70"
+                    )}
+                  >
+                    <FolderUp className="w-3.5 h-3.5 shrink-0 text-nexo-brand" />
+                    <span className="truncate">{p.name}</span>
+                  </button>
+                  <button
+                    type="button"
+                    title="New chat in this folder"
+                    onClick={() => newThreadInProject(p.id)}
+                    className="shrink-0 px-2 rounded-lg text-nexo-muted hover:bg-nexo-hover hover:text-nexo-brand"
+                  >
+                    <MessageSquarePlus className="w-3.5 h-3.5" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+
         <div className="flex items-center justify-between mb-2">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-nexo-muted">
             Projects
@@ -147,7 +238,7 @@ export function Sidebar({ onBuildMyApp, onDownloadZip }: SidebarProps) {
           </button>
         </div>
         <ul className="space-y-0.5 mb-4">
-          {projects.map((p) => (
+          {defaultProjects.map((p) => (
             <li key={p.id}>
               <button
                 type="button"
@@ -168,6 +259,7 @@ export function Sidebar({ onBuildMyApp, onDownloadZip }: SidebarProps) {
 
         <span className="text-[11px] font-semibold uppercase tracking-wider text-nexo-muted mb-2">
           Chats
+          {activeProject?.kind === "imported" ? ` · ${activeProject.name}` : ""}
         </span>
         <div className="relative mb-2">
           <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-nexo-muted" />
@@ -179,9 +271,13 @@ export function Sidebar({ onBuildMyApp, onDownloadZip }: SidebarProps) {
             className="w-full pl-8 pr-2 py-1.5 rounded-lg text-[12px] bg-nexo-composer/50 border border-nexo-border placeholder:text-nexo-muted focus:outline-none focus:ring-1 focus:ring-nexo-brand/40"
           />
         </div>
-        <ul className="space-y-0.5 overflow-y-auto flex-1 pr-1">
+        <ul className="space-y-0.5 flex-1 pr-1 pb-2">
           {projectThreads.length === 0 && (
-            <li className="text-[12px] text-nexo-muted px-2 py-3">Start a new chat</li>
+            <li className="text-[12px] text-nexo-muted px-2 py-3">
+              {activeProject?.kind === "imported"
+                ? "Start a chat to ask about this folder."
+                : "Each chat has its own files."}
+            </li>
           )}
           {projectThreads.map((t) => (
             <li key={t.id} className="group flex items-center gap-0.5">
@@ -218,16 +314,26 @@ export function Sidebar({ onBuildMyApp, onDownloadZip }: SidebarProps) {
         </ul>
       </div>
 
-      <div className="p-3 border-t border-nexo-border flex items-center justify-between">
-        <span className="text-[11px] text-nexo-muted">Theme</span>
+      <div className="p-3 border-t border-nexo-border space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] text-nexo-muted">Theme</span>
+          <button
+            type="button"
+            onClick={toggle}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[12px] bg-nexo-hover hover:opacity-90 transition-all"
+            aria-label="Toggle theme"
+          >
+            {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            {theme === "dark" ? "Light" : "Dark"}
+          </button>
+        </div>
         <button
           type="button"
-          onClick={toggle}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[12px] bg-nexo-hover hover:opacity-90 transition-all"
-          aria-label="Toggle theme"
+          onClick={onSignOut}
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-[12px] text-nexo-muted hover:text-nexo-fg hover:bg-nexo-hover transition-all"
         >
-          {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-          {theme === "dark" ? "Light" : "Dark"}
+          <LogOut className="w-3.5 h-3.5" />
+          Sign out &amp; settings
         </button>
       </div>
     </aside>

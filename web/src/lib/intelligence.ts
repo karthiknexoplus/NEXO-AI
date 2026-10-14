@@ -21,7 +21,7 @@ const DEFAULT_MODES: IntelligenceModeOption[] = [
 
 export async function fetchIntelligenceModes(): Promise<IntelligenceModeOption[]> {
   try {
-    const res = await fetch("/api/intelligence/modes");
+    const res = await fetch("/api/intelligence/modes", { credentials: "include" });
     if (!res.ok) return DEFAULT_MODES;
     const data = (await res.json()) as { modes: IntelligenceModeOption[] };
     return data.modes?.length ? data.modes : DEFAULT_MODES;
@@ -52,6 +52,7 @@ export async function streamIntelligenceChat(
   try {
     res = await fetch("/api/intelligence/chat", {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
       body: JSON.stringify({ mode, messages }),
       signal: linked,

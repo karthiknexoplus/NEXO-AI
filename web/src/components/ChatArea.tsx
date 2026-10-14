@@ -12,6 +12,7 @@ import { labelForPhase } from "../lib/generationStatus";
 import { runChatGeneration } from "../lib/runChatGeneration";
 import { isFailedAssistantReply, STUB_REPLY_MESSAGE } from "../lib/sanitizeAssistant";
 import { buildWorkspaceContext, formatNetworkError } from "../lib/workspaceContext";
+import { useWorkspaceId } from "../hooks/useWorkspaceId";
 import { useChatStore, type Message } from "../store/chatStore";
 import { useUiStore } from "../store/uiStore";
 
@@ -23,7 +24,6 @@ export function ChatArea({ modes }: ChatAreaProps) {
   const {
     threads,
     activeThreadId,
-    activeProjectId,
     intelligenceMode,
     setIntelligenceMode,
     newThread,
@@ -31,6 +31,7 @@ export function ChatArea({ modes }: ChatAreaProps) {
     updateAssistant,
   } = useChatStore();
 
+  const workspaceId = useWorkspaceId();
   const thread = threads.find((t) => t.id === activeThreadId);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -87,7 +88,8 @@ export function ChatArea({ modes }: ChatAreaProps) {
         .map((m) => ({ role: m.role, content: m.content })) ?? [];
 
     try {
-      const workspaceCtx = await buildWorkspaceContext(activeProjectId, text);
+      const wsId = workspaceId ?? threadId;
+      const workspaceCtx = await buildWorkspaceContext(wsId, text);
       const baseHistory = history.map((m) => ({
         role: m.role as "user" | "assistant",
         content: m.content,
@@ -105,7 +107,7 @@ export function ChatArea({ modes }: ChatAreaProps) {
 
       const { content: acc, written } = await runChatGeneration({
         mode: intelligenceMode,
-        projectId: activeProjectId,
+        projectId: wsId,
         userText: text,
         chatHistory,
         onToken: (clean, phase, detail) => {
