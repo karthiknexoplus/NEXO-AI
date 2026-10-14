@@ -2,43 +2,111 @@
 @tailwind components;
 @tailwind utilities;
 
+:root.dark {
+  --nexo-bg: #08080a;
+  --nexo-sidebar: #0c0c0f;
+  --nexo-panel: #0a0a0d;
+  --nexo-composer: #141418;
+  --nexo-border: rgba(255, 255, 255, 0.08);
+  --nexo-hover: rgba(255, 255, 255, 0.06);
+  --nexo-muted: #8b8b95;
+  --nexo-fg: #ececf1;
+  --nexo-brand: #2f5fd4;
+}
+
+:root.light {
+  --nexo-bg: #f4f6fb;
+  --nexo-sidebar: #ffffff;
+  --nexo-panel: #f8f9fc;
+  --nexo-composer: #ffffff;
+  --nexo-border: rgba(15, 23, 42, 0.1);
+  --nexo-hover: rgba(47, 95, 212, 0.08);
+  --nexo-muted: #64748b;
+  --nexo-fg: #0f172a;
+  --nexo-brand: #2f5fd4;
+}
+
 html,
 body,
 #root {
   height: 100%;
+  background: var(--nexo-bg);
+  color: var(--nexo-fg);
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+  scrollbar-color: rgba(128, 128, 128, 0.35) transparent;
 }
 
 ::-webkit-scrollbar {
   width: 6px;
-  height: 6px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(128, 128, 128, 0.35);
   border-radius: 3px;
 }
 
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.35s ease-out both;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.bg-nexo-sidebar { background: var(--nexo-sidebar); }
+.bg-nexo-panel { background: var(--nexo-panel); }
+.bg-nexo-composer { background: var(--nexo-composer); }
+.bg-nexo-hover { background: var(--nexo-hover); }
+.bg-nexo-brand { background: var(--nexo-brand); }
+.border-nexo-border { border-color: var(--nexo-border); }
+.text-nexo-fg { color: var(--nexo-fg); }
+.text-nexo-muted { color: var(--nexo-muted); }
+.text-nexo-brand { color: var(--nexo-brand); }
+.ring-nexo-brand\/35 { --tw-ring-color: color-mix(in srgb, var(--nexo-brand) 35%, transparent); }
+
 .prose-chat {
-  @apply text-[14px] leading-relaxed text-cursor-fg;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--nexo-fg);
 }
 
 .prose-chat p {
-  @apply my-2;
+  margin: 0.5em 0;
 }
 
 .prose-chat pre {
-  @apply my-3 rounded-xl border border-cursor-border bg-black/40 overflow-x-auto text-[13px];
+  margin: 0.75rem 0;
+  border-radius: 0.75rem;
+  border: 1px solid var(--nexo-border);
+  background: color-mix(in srgb, var(--nexo-composer) 80%, #000 20%);
+  overflow-x: auto;
+  font-size: 13px;
 }
 
 .prose-chat code {
-  @apply font-mono text-[13px];
+  font-family: Menlo, Monaco, Consolas, monospace;
 }
 
 .prose-chat :not(pre) > code {
-  @apply bg-white/10 px-1.5 py-0.5 rounded;
+  background: var(--nexo-hover);
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.35rem;
+}
+
+.shadow-composer {
+  box-shadow:
+    0 0 0 1px var(--nexo-border),
+    0 12px 40px rgba(0, 0, 0, 0.12);
 }

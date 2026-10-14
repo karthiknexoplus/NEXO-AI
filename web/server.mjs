@@ -1,0 +1,276 @@
+import http from "node:http";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { extractFilesFromMarkdown } from "./server/extractFiles.mjs";
+import { publicModes, resolveModel } from "./server/models.mjs";
+import {
+  handleDownloadZip,
+  handleListFiles,
+  handleReadFile,
+  handleWriteFile,
+  projectDir,
+} from "./server/workspaceApi.mjs";
+
+const SYSTEM_PROMPT = `You are NEXOPLUS, an expert AI software developer (NEXOPLUS Automations, Coimbatore).
+
+When generating files, ALWAYS use fences with the file path on the first line:
+\`\`\`path/to/file.ext
+...full file contents...
+\`\`\`
+
+Be concise. Production-ready code. Use path fences for every file you create.`;
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const PORT = Number(process.env.PORT || 3000);
+const OLLAMA_HOST = process.env.OLLAMA_HOST || "http://127.0.0.1:11434";
+const WORKSPACE_ROOT = path.resolve(
+  process.env.WORKSPACE_ROOT || path.join(__dirname, "workspace")
+);
+const DIST = path.join(__dirname, "dist");
+const API_ONLY = process.env.API_ONLY === "1";
+
+fs.mkdirSync(WORKSPACE_ROOT, { recursive: true });
+
+function sendJson(res, status, data) {
+  res.writeHead(status, { "Content-Type": "application/json" });
+  res.end(JSON.stringify(data));
+}
+
+function safeJoin(root, relativePath) {
+  const target = path.normalize(path.join(root, relativePath));
+  if (!target.startsWith(root)) {
+    throw new Error("Invalid path");
+  }
+  return target;
+}
+
+async function readBody(req) {
+  const chunks = [];
+  for await (const chunk of req) chunks.push(chunk);
+  return Buffer.concat(chunks).toString("utf8");
+}
+
+async function proxyOllama(req, res, urlPath) {
+  const target = `${OLLAMA_HOST}${urlPath}`;
+  const headers = { ...req.headers, host: new URL(OLLAMA_HOST).host };
+  delete headers.connection;
+
+  if (urlPath.includes("/v1/chat/completions") && req.method === "POST") {
+    const raw = await readBody(req);
+    let payload = {};
+    try {
+      payload = JSON.parse(raw);
+    } catch {
+      payload = {};
+    }
+    payload.keep_alive = "30m";
+    payload.options = {
+      ...(payload.options || {}),
+      num_ctx: 8192,
+      num_predict: 2048,
+    };
+    payload.temperature = payload.temperature ?? 0.2;
+    payload.stream = true;
+
+    const upstream = await fetch(target, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
+      body: JSON.stringify(payload),
+    });
+    res.writeHead(upstream.status, {
+      "Content-Type": upstream.headers.get("content-type") || "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    });
+    if (upstream.body) {
+      const reader = upstream.body.getReader();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        res.write(value);
+      }
+    }
+    res.end();
+    return;
+  }
+
+  const body = req.method === "GET" || req.method === "HEAD" ? undefined : await readBody(req);
+  const upstream = await fetch(target, {
+    method: req.method,
+    headers,
+    body,
+  });
+  res.writeHead(upstream.status, {
+    "Content-Type": upstream.headers.get("content-type") || "application/json",
+  });
+  res.end(Buffer.from(await upstream.arrayBuffer()));
+}
+
+async function handleWorkspaceApply(req, res) {
+  const raw = await readBody(req);
+  const { content, projectId } = JSON.parse(raw || "{}");
+  if (!content) {
+    return sendJson(res, 400, { error: "Missing content" });
+  }
+
+  const dir = projectDir(WORKSPACE_ROOT, projectId || "default");
+  fs.mkdirSync(dir, { recursive: true });
+
+  const files = extractFilesFromMarkdown(content);
+  const written = [];
+
+  for (const file of files) {
+    const abs = safeJoin(dir, file.relativePath);
+    fs.mkdirSync(path.dirname(abs), { recursive: true });
+    fs.writeFileSync(abs, file.content, "utf8");
+    written.push(file.relativePath);
+  }
+
+  sendJson(res, 200, { written, root: dir });
+}
+
+async function handleIntelligenceChat(req, res) {
+  const raw = await readBody(req);
+  let body = {};
+  try {
+    body = JSON.parse(raw || "{}");
+  } catch {
+    return sendJson(res, 400, { error: "Invalid request" });
+  }
+
+  const mode = body.mode || "smart";
+  const model = resolveModel(mode);
+  const messages = Array.isArray(body.messages) ? body.messages : [];
+
+  const payload = {
+    model,
+    stream: true,
+    temperature: mode === "fast" ? 0.15 : 0.22,
+    keep_alive: "30m",
+    options: {
+      num_ctx: mode === "deep" ? 12288 : 8192,
+      num_predict: mode === "fast" ? 1536 : 2048,
+    },
+    messages: [{ role: "system", content: SYSTEM_PROMPT }, ...messages],
+  };
+
+  const target = `${OLLAMA_HOST}/v1/chat/completions`;
+  const upstream = await fetch(target, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!upstream.ok) {
+    const text = await upstream.text();
+    const friendly =
+      upstream.status === 404 || text.toLowerCase().includes("not found")
+        ? "NEXOPLUS intelligence is still loading. Please try again in a moment."
+        : "NEXOPLUS is temporarily unavailable. Please retry shortly.";
+    return sendJson(res, 503, { error: friendly });
+  }
+
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+  });
+
+  if (upstream.body) {
+    const reader = upstream.body.getReader();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      res.write(value);
+    }
+  }
+  res.end();
+}
+
+function serveStatic(req, res, urlPath) {
+  let filePath = path.join(DIST, urlPath === "/" ? "index.html" : urlPath);
+  if (!filePath.startsWith(DIST)) {
+    res.writeHead(403);
+    return res.end();
+  }
+  if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
+    filePath = path.join(DIST, "index.html");
+  }
+  const ext = path.extname(filePath);
+  const types = {
+    ".html": "text/html",
+    ".js": "application/javascript",
+    ".css": "text/css",
+    ".png": "image/png",
+    ".svg": "image/svg+xml",
+    ".ico": "image/x-icon",
+  };
+  res.writeHead(200, { "Content-Type": types[ext] || "application/octet-stream" });
+  fs.createReadStream(filePath).pipe(res);
+}
+
+const server = http.createServer(async (req, res) => {
+  try {
+    const url = new URL(req.url || "/", `http://${req.headers.host}`);
+    const pathname = url.pathname;
+
+    if (pathname === "/api/intelligence/modes" && req.method === "GET") {
+      return sendJson(res, 200, { modes: publicModes() });
+    }
+    if (pathname === "/api/intelligence/chat" && req.method === "POST") {
+      return handleIntelligenceChat(req, res);
+    }
+    if (pathname.startsWith("/api/ollama/")) {
+      return proxyOllama(req, res, pathname.replace("/api/ollama", ""));
+    }
+    if (pathname === "/api/workspace/apply" && req.method === "POST") {
+      return handleWorkspaceApply(req, res);
+    }
+    if (pathname === "/api/workspace/files" && req.method === "GET") {
+      return handleListFiles(res, WORKSPACE_ROOT, url.searchParams.get("projectId"));
+    }
+    if (pathname === "/api/workspace/file" && req.method === "GET") {
+      const p = url.searchParams.get("path");
+      if (!p) return sendJson(res, 400, { error: "Missing path" });
+      return handleReadFile(
+        res,
+        WORKSPACE_ROOT,
+        url.searchParams.get("projectId"),
+        p,
+        safeJoin
+      );
+    }
+    if (pathname === "/api/workspace/file" && req.method === "PUT") {
+      const raw = await readBody(req);
+      const { projectId, path: filePath, content } = JSON.parse(raw || "{}");
+      if (!filePath) return sendJson(res, 400, { error: "Missing path" });
+      return handleWriteFile(
+        res,
+        WORKSPACE_ROOT,
+        projectId,
+        filePath,
+        content ?? "",
+        safeJoin
+      );
+    }
+    if (pathname === "/api/workspace/download" && req.method === "GET") {
+      return handleDownloadZip(req, res, WORKSPACE_ROOT, url.searchParams.get("projectId"));
+    }
+    if (pathname === "/api/health") {
+      return sendJson(res, 200, { ok: true, service: "nexoplus-web" });
+    }
+
+    if (!API_ONLY && req.method === "GET" && fs.existsSync(DIST)) {
+      return serveStatic(req, res, pathname);
+    }
+
+    sendJson(res, 404, { error: "Not found" });
+  } catch (err) {
+    sendJson(res, 500, { error: err instanceof Error ? err.message : "Server error" });
+  }
+});
+
+server.listen(PORT, () => {
+  console.log(`NEXOPLUS ready → http://0.0.0.0:${PORT}`);
+});

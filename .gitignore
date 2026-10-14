@@ -1,5 +1,8 @@
 node_modules
 dist
+web/workspace/*
+!web/workspace/.gitkeep
+*.tsbuildinfo
 *.vsix
 .DS_Store
 .vscode-test

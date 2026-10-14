@@ -1,15 +1,18 @@
 # NEXO AI — Local Cursor-style coding assistant
 
-## Web app (recommended)
+## NEXOPLUS Web (recommended)
 
-**Full-screen Cursor-like UI** in the browser — projects, chat sidebar, center composer.
+**Cursor-style web app** — NEXOPLUS branding, projects/chats sidebar, auto file creation, dark/light mode.
+
+### One command
 
 ```bash
-ollama serve && ollama pull qwen2.5-coder
-cd web && npm install && npm run dev
+chmod +x setup.sh && ./setup.sh
 ```
 
-Open **http://localhost:3000** — see [web/README.md](web/README.md).
+Cloud: `docker compose up -d` — see [web/README.md](web/README.md).
+
+Repo: [github.com/karthiknexoplus/NEXO-AI](https://github.com/karthiknexoplus/NEXO-AI)
 
 ---
 

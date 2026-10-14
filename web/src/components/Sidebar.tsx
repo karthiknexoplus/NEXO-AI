@@ -1,19 +1,22 @@
 import {
+  Download,
   FolderKanban,
   MessageSquarePlus,
+  Moon,
+  Rocket,
   Search,
-  Settings2,
-  Sparkles,
+  Sun,
 } from "lucide-react";
 import clsx from "clsx";
 import { useChatStore } from "../store/chatStore";
+import { useThemeStore } from "../store/themeStore";
 
 interface SidebarProps {
-  onOpenSettings: () => void;
-  modelsOnline: boolean;
+  onBuildMyApp: () => void;
+  onDownloadZip: () => void;
 }
 
-export function Sidebar({ onOpenSettings, modelsOnline }: SidebarProps) {
+export function Sidebar({ onBuildMyApp, onDownloadZip }: SidebarProps) {
   const {
     projects,
     threads,
@@ -24,50 +27,61 @@ export function Sidebar({ onOpenSettings, modelsOnline }: SidebarProps) {
     setActiveThread,
     newProject,
   } = useChatStore();
+  const { theme, toggle } = useThemeStore();
 
   const projectThreads = threads.filter((t) => t.projectId === activeProjectId);
 
   return (
-    <aside className="w-[260px] shrink-0 h-full flex flex-col bg-cursor-sidebar border-r border-cursor-border">
-      <div className="p-3 flex items-center gap-2.5">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cursor-accent/80 to-cursor-accent/30 flex items-center justify-center">
-          <Sparkles className="w-4 h-4 text-white" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-sm font-semibold tracking-tight">NEXO</p>
-          <p className="text-[10px] text-cursor-muted flex items-center gap-1">
-            <span
-              className={clsx(
-                "w-1.5 h-1.5 rounded-full",
-                modelsOnline ? "bg-emerald-400" : "bg-amber-400"
-              )}
-            />
-            {modelsOnline ? "Ollama local" : "Ollama offline"}
-          </p>
-        </div>
+    <aside className="w-[272px] shrink-0 h-full flex flex-col bg-nexo-sidebar border-r border-nexo-border transition-colors duration-300">
+      <div className="p-4 border-b border-nexo-border">
+        <img
+          src="/nexoplus-logo.png"
+          alt="NEXOPLUS Automations"
+          className="w-full rounded-lg object-contain max-h-[72px]"
+        />
+        <p className="text-[10px] text-center text-nexo-muted mt-2 tracking-wide uppercase">
+          Intelligent AI Studio
+        </p>
       </div>
 
-      <div className="px-2 space-y-1">
+      <div className="px-2 pt-2 space-y-1">
         <button
           type="button"
           onClick={() => newThread()}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-[13px] font-medium bg-cursor-hover hover:bg-white/10 transition-colors"
+          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[13px] font-medium bg-nexo-brand/15 text-nexo-fg hover:bg-nexo-brand/25 transition-all duration-200"
         >
-          <MessageSquarePlus className="w-4 h-4 text-cursor-muted" />
+          <MessageSquarePlus className="w-4 h-4 text-nexo-brand" />
           New Chat
         </button>
         <button
           type="button"
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-[13px] text-cursor-muted hover:bg-cursor-hover transition-colors"
+          onClick={onBuildMyApp}
+          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[13px] font-medium border border-nexo-brand/40 text-nexo-brand hover:bg-nexo-brand/10 transition-all"
+        >
+          <Rocket className="w-4 h-4" />
+          Build my app
+        </button>
+        <button
+          type="button"
+          onClick={onDownloadZip}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-[13px] text-nexo-muted hover:bg-nexo-hover transition-colors"
+        >
+          <Download className="w-4 h-4" />
+          Download project ZIP
+        </button>
+        <button
+          type="button"
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-[13px] text-nexo-muted hover:bg-nexo-hover transition-colors opacity-60 cursor-not-allowed"
+          title="Coming soon"
         >
           <Search className="w-4 h-4" />
           Search chats
         </button>
       </div>
 
-      <div className="mt-4 px-3">
+      <div className="mt-4 px-3 flex-1 min-h-0 flex flex-col">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[11px] font-medium uppercase tracking-wider text-cursor-muted">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-nexo-muted">
             Projects
           </span>
           <button
@@ -76,22 +90,22 @@ export function Sidebar({ onOpenSettings, modelsOnline }: SidebarProps) {
               const name = window.prompt("Project name", "New Project");
               if (name?.trim()) newProject(name.trim());
             }}
-            className="text-[11px] text-cursor-accent hover:underline"
+            className="text-[11px] text-nexo-brand hover:underline"
           >
             + New
           </button>
         </div>
-        <ul className="space-y-0.5">
+        <ul className="space-y-0.5 mb-4">
           {projects.map((p) => (
             <li key={p.id}>
               <button
                 type="button"
                 onClick={() => setActiveProject(p.id)}
                 className={clsx(
-                  "w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[13px] text-left transition-colors",
+                  "w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[13px] text-left transition-all duration-200",
                   p.id === activeProjectId
-                    ? "bg-cursor-hover text-cursor-fg"
-                    : "text-cursor-muted hover:bg-cursor-hover/60"
+                    ? "bg-nexo-hover text-nexo-fg"
+                    : "text-nexo-muted hover:bg-nexo-hover/70"
                 )}
               >
                 <FolderKanban className="w-3.5 h-3.5 shrink-0" />
@@ -100,15 +114,13 @@ export function Sidebar({ onOpenSettings, modelsOnline }: SidebarProps) {
             </li>
           ))}
         </ul>
-      </div>
 
-      <div className="mt-4 px-3 flex-1 min-h-0 flex flex-col">
-        <span className="text-[11px] font-medium uppercase tracking-wider text-cursor-muted mb-2">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-nexo-muted mb-2">
           Chats
         </span>
         <ul className="space-y-0.5 overflow-y-auto flex-1 pr-1">
           {projectThreads.length === 0 && (
-            <li className="text-[12px] text-cursor-muted px-2 py-4">No chats yet</li>
+            <li className="text-[12px] text-nexo-muted px-2 py-3">Start a new chat</li>
           )}
           {projectThreads.map((t) => (
             <li key={t.id}>
@@ -116,10 +128,10 @@ export function Sidebar({ onOpenSettings, modelsOnline }: SidebarProps) {
                 type="button"
                 onClick={() => setActiveThread(t.id)}
                 className={clsx(
-                  "w-full text-left px-2.5 py-2 rounded-md text-[13px] transition-colors truncate",
+                  "w-full text-left px-2.5 py-2 rounded-lg text-[13px] transition-all duration-200 truncate",
                   t.id === activeThreadId
-                    ? "bg-cursor-hover text-cursor-fg"
-                    : "text-cursor-muted hover:bg-cursor-hover/60"
+                    ? "bg-nexo-hover text-nexo-fg"
+                    : "text-nexo-muted hover:bg-nexo-hover/70"
                 )}
               >
                 {t.title}
@@ -129,14 +141,16 @@ export function Sidebar({ onOpenSettings, modelsOnline }: SidebarProps) {
         </ul>
       </div>
 
-      <div className="p-2 border-t border-cursor-border">
+      <div className="p-3 border-t border-nexo-border flex items-center justify-between">
+        <span className="text-[11px] text-nexo-muted">Theme</span>
         <button
           type="button"
-          onClick={onOpenSettings}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-[13px] text-cursor-muted hover:bg-cursor-hover"
+          onClick={toggle}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[12px] bg-nexo-hover hover:opacity-90 transition-all"
+          aria-label="Toggle theme"
         >
-          <Settings2 className="w-4 h-4" />
-          Settings
+          {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          {theme === "dark" ? "Light" : "Dark"}
         </button>
       </div>
     </aside>

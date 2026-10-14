@@ -26,8 +26,8 @@ interface ChatState {
   threads: ChatThread[];
   activeProjectId: string;
   activeThreadId: string | null;
-  model: string;
-  setModel: (m: string) => void;
+  intelligenceMode: "fast" | "smart" | "deep";
+  setIntelligenceMode: (m: "fast" | "smart" | "deep") => void;
   newProject: (name: string) => void;
   setActiveProject: (id: string) => void;
   newThread: () => string;
@@ -50,9 +50,9 @@ export const useChatStore = create<ChatState>()(
       threads: [],
       activeProjectId: defaultProject.id,
       activeThreadId: null,
-      model: "qwen2.5-coder",
+      intelligenceMode: "smart",
 
-      setModel: (model) => set({ model }),
+      setIntelligenceMode: (intelligenceMode) => set({ intelligenceMode }),
 
       newProject: (name) => {
         const p: Project = { id: `p-${Date.now()}`, name, createdAt: Date.now() };
@@ -120,6 +120,6 @@ export const useChatStore = create<ChatState>()(
           threads: s.threads.map((t) => (t.id === threadId ? { ...t, title } : t)),
         })),
     }),
-    { name: "nexo-chat-v1" }
+    { name: "nexo-chat-v2" }
   )
 );

@@ -1,41 +1,47 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { AppFooter } from "./components/AppFooter";
+import { BuildWizard } from "./components/BuildWizard";
 import { ChatArea } from "./components/ChatArea";
-import { SettingsModal } from "./components/SettingsModal";
+import { CodePanel } from "./components/CodePanel";
 import { Sidebar } from "./components/Sidebar";
-import { listModels } from "./lib/ollama";
+import { fetchIntelligenceModes, type IntelligenceModeOption } from "./lib/intelligence";
+import { downloadProjectZip } from "./lib/workspace";
 import { useChatStore } from "./store/chatStore";
+import { applyTheme, useThemeStore } from "./store/themeStore";
+import { useUiStore } from "./store/uiStore";
+import { useEffect } from "react";
 
 export default function App() {
-  const [models, setModels] = useState<string[]>([]);
-  const [modelsOnline, setModelsOnline] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const setModel = useChatStore((s) => s.setModel);
-  const model = useChatStore((s) => s.model);
+  const [modes, setModes] = useState<IntelligenceModeOption[]>([]);
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const theme = useThemeStore((s) => s.theme);
+  const activeProjectId = useChatStore((s) => s.activeProjectId);
+  const queuePrompt = useUiStore((s) => s.queuePrompt);
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const list = await listModels();
-        setModels(list);
-        setModelsOnline(true);
-        if (list.length && !list.includes(model)) {
-          const match = list.find((m) => m.startsWith("qwen2.5-coder")) ?? list[0];
-          setModel(match);
-        }
-      } catch {
-        setModelsOnline(false);
-      }
-    };
-    void load();
-    const id = window.setInterval(load, 15000);
-    return () => window.clearInterval(id);
-  }, [model, setModel]);
+    applyTheme(theme);
+  }, [theme]);
+
+  useEffect(() => {
+    void fetchIntelligenceModes().then(setModes);
+  }, []);
 
   return (
-    <div className="h-full flex">
-      <Sidebar onOpenSettings={() => setSettingsOpen(true)} modelsOnline={modelsOnline} />
-      <ChatArea models={models} modelsOnline={modelsOnline} />
-      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+    <div className="h-full flex flex-col">
+      <div className="flex-1 flex min-h-0 overflow-hidden">
+        <Sidebar
+          onBuildMyApp={() => setWizardOpen(true)}
+          onDownloadZip={() => downloadProjectZip(activeProjectId)}
+        />
+        <ChatArea modes={modes} />
+        <CodePanel />
+      </div>
+      <AppFooter />
+      <BuildWizard
+        open={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+        onSubmit={(prompt, autoSend) => queuePrompt(prompt, autoSend)}
+      />
     </div>
   );
 }

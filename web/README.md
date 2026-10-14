@@ -1,41 +1,47 @@
-# NEXO Web — Cursor-style AI IDE (browser)
+# NEXOPLUS Web
 
-Full-screen web app with **left sidebar** (projects + chats) and **center chat** (Cursor-like composer), powered by **local Ollama**.
+Cursor-style AI studio for **NEXOPLUS Automations** — local/cloud Ollama, auto file creation, dark/light theme.
 
-## Run (Mac)
+## One command (Mac / Linux server)
+
+From repo root:
 
 ```bash
-# Terminal 1 — AI engine
-ollama serve
-ollama pull qwen2.5-coder
+chmod +x setup.sh
+./setup.sh
+```
 
-# Terminal 2 — web app
-cd "/Users/apple/Desktop/NEXO AI/web"
+Opens **http://localhost:3000** (set `PORT` for cloud).
+
+## Docker (public cloud)
+
+```bash
+docker compose up -d --build
+# First time: docker compose exec ollama ollama pull $NEXO_MODEL
+```
+
+Expose port **3000** behind nginx/Caddy with HTTPS.
+
+## Dev
+
+```bash
+cd web
 npm install
 npm run dev
 ```
 
-Open **http://localhost:3000**
+Visit **http://localhost:5173** (API on 3001).
 
-## Layout
+## Auto-created files
 
-| Area | Features |
-|------|----------|
-| **Left** | New chat, projects, chat history (persisted in browser) |
-| **Center** | Conversation + floating composer, model picker |
-| **Settings** | Ollama setup help |
+Generated files land in `web/workspace/project-<id>/` when the model uses:
 
-Chats are stored in `localStorage` via Zustand persist.
-
-## vs VS Code extension
-
-Use this folder for the **web product**. The `src/` extension at repo root is optional legacy.
-
-## Production build
-
-```bash
-npm run build
-npm run preview
+```markdown
+```src/index.ts
+// code
+```
 ```
 
-For production you still need Ollama on the same machine or a backend proxy.
+## Branding
+
+Logo: `public/nexoplus-logo.png` · Footer beta notice · Built in Coimbatore with love.
