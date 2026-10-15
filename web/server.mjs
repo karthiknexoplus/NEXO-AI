@@ -325,6 +325,14 @@ function extractSearchQuery(text) {
     if (q) return q;
     return t.replace(/\b(search (?:the )?(?:web|internet|online)|look up|google)\b/gi, "").trim() || null;
   }
+
+  // Auto-trigger for likely factual/place/food queries without coding intent.
+  const hasCodeIntent = /\b(create|build|fix|code|app|api|project|file|component|function|bug|error|feature|add|update|change|modify|delete|refactor|test|deploy|database|todo|landing|website|program|script|functionality)\b/i.test(t);
+  const hasLookupIntent = /\b(restaurant|biryani|cafe|hotel|food|near|nearby|where|what is|who is|info|address|rating|contact|shop|store|weather|news|tell me about)\b/i.test(t);
+  const hasProperNoun = /[A-Z][a-z]{2,}/.test((text || "").trim());
+  if (!hasCodeIntent && (hasLookupIntent || hasProperNoun)) {
+    return t;
+  }
   return null;
 }
 
