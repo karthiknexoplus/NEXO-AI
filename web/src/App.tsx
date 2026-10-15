@@ -5,8 +5,10 @@ import { BuildWizard } from "./components/BuildWizard";
 import { ChatArea } from "./components/ChatArea";
 import { CodePanel } from "./components/CodePanel";
 import { LandingPage } from "./components/LandingPage";
+import { AnalyticsDashboard } from "./components/AnalyticsDashboard";
 import { ProviderSettingsModal } from "./components/ProviderSettingsModal";
 import { Sidebar } from "./components/Sidebar";
+import { trackEvent } from "./lib/analytics";
 import { fetchAuthMe, logout, type AuthSession } from "./lib/auth";
 import { fetchIntelligenceModes, type IntelligenceModeOption } from "./lib/intelligence";
 import { useWorkspaceId } from "./hooks/useWorkspaceId";
@@ -18,6 +20,7 @@ export default function App() {
   const [modes, setModes] = useState<IntelligenceModeOption[]>([]);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [authReady, setAuthReady] = useState(false);
   const [session, setSession] = useState<AuthSession | null>(null);
   const theme = useThemeStore((s) => s.theme);
@@ -61,6 +64,11 @@ export default function App() {
   useEffect(() => {
     if (!signedIn) return;
     void fetchIntelligenceModes().then(setModes);
+  }, [signedIn]);
+
+  useEffect(() => {
+    if (!signedIn) return;
+    void trackEvent("app_opened", { path: window.location.pathname });
   }, [signedIn]);
 
   const handleSignOut = async () => {
@@ -121,6 +129,14 @@ export default function App() {
                 }
               : undefined
           }
+          onOpenAnalytics={
+            session?.canManageSettings
+              ? () => {
+                  setAnalyticsOpen(true);
+                  setSidebarOpen(false);
+                }
+              : undefined
+          }
           userEmail={session?.email}
         />
         <ChatArea
@@ -133,9 +149,13 @@ export default function App() {
       <BuildWizard
         open={wizardOpen}
         onClose={() => setWizardOpen(false)}
-        onSubmit={(prompt, autoSend) => queuePrompt(prompt, autoSend)}
+        onSubmit={(prompt, autoSend) => {
+          void trackEvent("build_wizard_submitted", { promptLength: prompt.length });
+          queuePrompt(prompt, autoSend);
+        }}
       />
       <ProviderSettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      {analyticsOpen && <AnalyticsDashboard onClose={() => setAnalyticsOpen(false)} />}
     </div>
   );
 }

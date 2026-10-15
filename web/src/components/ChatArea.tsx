@@ -13,6 +13,7 @@ import { runChatGeneration } from "../lib/runChatGeneration";
 import { isFailedAssistantReply, STUB_REPLY_MESSAGE } from "../lib/sanitizeAssistant";
 import { buildWorkspaceContext, formatNetworkError } from "../lib/workspaceContext";
 import { useWorkspaceId } from "../hooks/useWorkspaceId";
+import { trackEvent } from "../lib/analytics";
 import { useChatStore, type Message } from "../store/chatStore";
 import { useUiStore } from "../store/uiStore";
 
@@ -188,7 +189,10 @@ export function ChatArea({ modes, onOpenSidebar }: ChatAreaProps) {
               key={m.id}
               type="button"
               title={m.hint}
-              onClick={() => setIntelligenceMode(m.id as IntelligenceMode)}
+              onClick={() => {
+                if (m.id !== intelligenceMode) void trackEvent("mode_switched", { mode: m.id });
+                setIntelligenceMode(m.id as IntelligenceMode);
+              }}
               className={clsx(
                 "px-2.5 sm:px-3 py-1.5 rounded-lg text-[10px] sm:text-[11px] font-semibold transition-all duration-200 whitespace-nowrap",
                 intelligenceMode === m.id

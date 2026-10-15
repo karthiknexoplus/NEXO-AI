@@ -9,11 +9,13 @@ import {
   Search,
   Settings,
   Sun,
+  BarChart3,
   LogOut,
   Trash2,
 } from "lucide-react";
 import clsx from "clsx";
 import { folderNameFromFileList, importLocalFolder } from "../lib/workspace";
+import { trackEvent } from "../lib/analytics";
 import { resolveWorkspaceId } from "../lib/workspaceId";
 import { useChatStore } from "../store/chatStore";
 import { useThemeStore } from "../store/themeStore";
@@ -26,6 +28,7 @@ interface SidebarProps {
   onDownloadZip: () => void;
   onSignOut: () => void;
   onOpenSettings?: () => void;
+  onOpenAnalytics?: () => void;
   userEmail?: string;
 }
 
@@ -36,6 +39,7 @@ export function Sidebar({
   onDownloadZip,
   onSignOut,
   onOpenSettings,
+  onOpenAnalytics,
   userEmail,
 }: SidebarProps) {
   const {
@@ -83,6 +87,7 @@ export function Sidebar({
       const written = await importLocalFolder(projectId, list);
       newThreadInProject(projectId);
       bumpWorkspace();
+      void trackEvent("folder_imported", { fileCount: written.length, into: "new_project" });
       window.alert(`Imported ${written.length} file(s) into folder "${name}". Start chatting to modify it.`);
     } catch (e) {
       window.alert(e instanceof Error ? e.message : "Import failed");
@@ -108,6 +113,7 @@ export function Sidebar({
     try {
       const written = await importLocalFolder(workspaceId, list);
       bumpWorkspace();
+      void trackEvent("folder_imported", { fileCount: written.length, into: "chat" });
       window.alert(`Imported ${written.length} file(s) into this chat's workspace.`);
     } catch (e) {
       window.alert(e instanceof Error ? e.message : "Import failed");
@@ -153,6 +159,7 @@ export function Sidebar({
           type="button"
           onClick={() => {
             newThread();
+            void trackEvent("new_chat");
             onMobileClose();
           }}
           className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-[13px] font-semibold nexo-btn-primary transition-all duration-200"
@@ -170,7 +177,10 @@ export function Sidebar({
         </button>
         <button
           type="button"
-          onClick={onDownloadZip}
+          onClick={() => {
+            void trackEvent("zip_downloaded");
+            onDownloadZip();
+          }}
           className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-[13px] text-nexo-muted hover:bg-nexo-hover hover:text-nexo-fg transition-colors"
         >
           <Download className="w-4 h-4" />
@@ -270,7 +280,10 @@ export function Sidebar({
             type="button"
             onClick={() => {
               const name = window.prompt("Project name", "New Project");
-              if (name?.trim()) newProject(name.trim());
+              if (name?.trim()) {
+                newProject(name.trim());
+                void trackEvent("project_created", { name: name.trim() });
+              }
             }}
             className="text-[11px] text-nexo-brand hover:underline"
           >
@@ -307,6 +320,10 @@ export function Sidebar({
             type="search"
             value={chatQuery}
             onChange={(e) => setChatQuery(e.target.value)}
+            onBlur={() => {
+              const q = chatQuery.trim();
+              if (q.length >= 2) void trackEvent("chat_search", { query: q });
+            }}
             placeholder="Search chats"
             className="w-full pl-8 pr-2 py-1.5 rounded-lg text-[12px] bg-nexo-composer/50 border border-nexo-border placeholder:text-nexo-muted focus:outline-none focus:ring-1 focus:ring-nexo-brand/40"
           />
@@ -368,6 +385,16 @@ export function Sidebar({
           >
             <Settings className="w-3.5 h-3.5" />
             Studio settings
+          </button>
+        )}
+        {onOpenAnalytics && (
+          <button
+            type="button"
+            onClick={onOpenAnalytics}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-[12px] text-nexo-muted hover:text-nexo-fg hover:bg-nexo-hover transition-all"
+          >
+            <BarChart3 className="w-3.5 h-3.5" />
+            Analytics
           </button>
         )}
         <div className="flex items-center justify-between">

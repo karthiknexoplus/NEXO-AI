@@ -11,6 +11,7 @@ import {
   handleAuthMe,
   handleAuthRegister,
   handleGoogleCallback,
+  getSessionFromRequest,
   handleGoogleStart,
   requireAuth,
 } from "./server/authHttp.mjs";
@@ -22,6 +23,7 @@ import {
   ollamaFallbackEnabled,
   resolveCloudModel,
 } from "./server/cloudProvider.mjs";
+import { getAnalyticsSummary, recordAnalyticsEvent } from "./server/dataStore.mjs";
 import {
   handleGitCommit,
   handleGitInit,
@@ -262,7 +264,7 @@ function customerChatError(httpStatus) {
   return "NEXOPLUS intelligence is temporarily unavailable. Please try again in a few minutes.";
 }
 
-async function handleIntelligenceChat(req, res) {
+async function handleIntelligenceChat(req, res, session = null) {
   let raw;
   try {
     raw = await readBody(req);
@@ -284,6 +286,23 @@ async function handleIntelligenceChat(req, res) {
   const mode = body.mode || "smart";
   const history = Array.isArray(body.messages) ? body.messages : [];
   const messages = [{ role: "system", content: SYSTEM_PROMPT }, ...history];
+
+  const lastUserMsg = history
+    .slice()
+    .reverse()
+    .find((m) => m && m.role === "user" && typeof m.content === "string");
+  recordAnalyticsEvent({
+    userId: session?.userId || "unknown",
+    userEmail: session?.email || "",
+    eventType: "chat_query",
+    metadata: {
+      mode,
+      prompt: lastUserMsg ? lastUserMsg.content : "",
+      promptLength: lastUserMsg ? lastUserMsg.content.length : 0,
+      messageCount: history.length,
+      backend: intelligenceBackend(),
+    },
+  });
 
   const backend = intelligenceBackend();
   const timeoutMs = getCloudTimeoutMs();
@@ -436,7 +455,7 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { modes: publicModes() });
     }
     if (pathname === "/api/intelligence/chat" && req.method === "POST") {
-      return handleIntelligenceChat(req, res);
+      return handleIntelligenceChat(req, res, getSessionFromRequest(req));
     }
     if (pathname.startsWith("/api/ollama/")) {
       return proxyOllama(req, res, pathname.replace("/api/ollama", ""));
@@ -501,6 +520,29 @@ const server = http.createServer(async (req, res) => {
     }
     if (pathname === "/api/workspace/download" && req.method === "GET") {
       return handleDownloadZip(req, res, WORKSPACE_ROOT, url.searchParams.get("projectId"));
+    }
+    if (pathname === "/api/analytics/event" && req.method === "POST") {
+      const session = getSessionFromRequest(req);
+      if (!session) return sendJson(res, 401, { error: "Sign in required" });
+      let body = {};
+      try {
+        body = JSON.parse((await readBody(req)) || "{}");
+      } catch {
+        return sendJson(res, 400, { error: "Invalid request" });
+      }
+      recordAnalyticsEvent({
+        userId: session.userId,
+        userEmail: session.email,
+        eventType: body.eventType,
+        metadata: body.metadata,
+      });
+      return sendJson(res, 200, { ok: true });
+    }
+    if (pathname === "/api/analytics/summary" && req.method === "GET") {
+      const session = getSessionFromRequest(req);
+      if (!session) return sendJson(res, 401, { error: "Sign in required" });
+      if (!session.canManageSettings) return sendJson(res, 403, { error: "Admin only" });
+      return sendJson(res, 200, getAnalyticsSummary());
     }
     if (pathname === "/api/health") {
       const backend = intelligenceBackend();

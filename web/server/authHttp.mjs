@@ -7,6 +7,7 @@ import {
   findOrCreateGoogleUser,
   getSession,
   loadStore,
+  recordAnalyticsEvent,
   registerUser,
 } from "./dataStore.mjs";
 import {
@@ -98,6 +99,7 @@ export function handleAuthLogin(req, res, sendJson, readBody) {
     if (!user) return sendJson(res, 401, { error: "Invalid email or password" });
     const token = createSession(user.id);
     setSessionCookie(res, token, req);
+    recordAnalyticsEvent({ userId: user.id, userEmail: user.email, eventType: "auth_login", metadata: { method: "password" } });
     return sendJson(res, 200, sessionPayloadForUserId(user.id));
   });
 }
@@ -114,6 +116,7 @@ export function handleAuthRegister(req, res, sendJson, readBody) {
     if (!result.ok) return sendJson(res, 400, { error: result.error });
     const token = createSession(result.user.id);
     setSessionCookie(res, token, req);
+    recordAnalyticsEvent({ userId: result.user.id, userEmail: result.user.email, eventType: "auth_register", metadata: { method: "password" } });
     return sendJson(res, 200, sessionPayloadForUserId(result.user.id));
   });
 }
@@ -122,6 +125,7 @@ export function handleAuthGuest(req, res, sendJson) {
   const guest = createGuestSessionUser();
   const token = createSession(guest.id, { guestLabel: guest.label });
   setSessionCookie(res, token, req);
+  recordAnalyticsEvent({ userId: guest.id, userEmail: guest.label, eventType: "auth_guest", metadata: {} });
   return sendJson(res, 200, {
     ok: true,
     email: guest.label,
@@ -190,6 +194,7 @@ export async function handleGoogleCallback(req, res) {
   const user = findOrCreateGoogleUser(result.email, result.googleId, result.name);
   const token = createSession(user.id);
   setSessionCookie(res, token, req);
+  recordAnalyticsEvent({ userId: user.id, userEmail: user.email, eventType: "auth_login", metadata: { method: "google" } });
   res.writeHead(302, { Location: "/?signed_in=1" });
   res.end();
 }
