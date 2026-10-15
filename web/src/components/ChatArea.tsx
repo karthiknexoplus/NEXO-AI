@@ -13,6 +13,7 @@ import { runChatGeneration } from "../lib/runChatGeneration";
 import { isFailedAssistantReply, STUB_REPLY_MESSAGE } from "../lib/sanitizeAssistant";
 import { buildWorkspaceContext, formatNetworkError } from "../lib/workspaceContext";
 import { useWorkspaceId } from "../hooks/useWorkspaceId";
+import { isLocationQuery, resolveUserLocation } from "../lib/location";
 import { trackEvent } from "../lib/analytics";
 import { useChatStore, type Message } from "../store/chatStore";
 import { useUiStore } from "../store/uiStore";
@@ -48,6 +49,7 @@ export function ChatArea({ modes, onOpenSidebar }: ChatAreaProps) {
   const thread = threads.find((t) => t.id === activeThreadId);
   const [input, setInput] = useState("");
   const [dragging, setDragging] = useState(false);
+  const [locating, setLocating] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [listening, setListening] = useState(false);
@@ -105,6 +107,20 @@ export function ChatArea({ modes, onOpenSidebar }: ChatAreaProps) {
         improve: `Improve UX and robustness of the current project/workspace: ${arg || "make meaningful enhancements"}. Output changed files in path fences.`,
       };
       if (cmdMap[cmd]) text = cmdMap[cmd];
+    }
+
+    if (isLocationQuery(rawText)) {
+      setLocating(true);
+      try {
+        const loc = await resolveUserLocation();
+        const base = rawText.replace(/\b(near(?:by| me)?|around me|my location|current location)\b/gi, "").trim() || "places";
+        text = `Search the web for ${base} near ${loc.place}. Summarize the best matches with addresses, ratings, contact details, and useful links.`;
+        showToast(`Using your location: ${loc.place}`, "info");
+      } catch (e) {
+        showToast(e instanceof Error ? e.message : "Location permission denied.", "error");
+      } finally {
+        setLocating(false);
+      }
     }
 
     let threadId = activeThreadId;
@@ -628,7 +644,7 @@ export function ChatArea({ modes, onOpenSidebar }: ChatAreaProps) {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={sending || uploading}
+                  disabled={sending || uploading || locating}
                   title="Upload file to analyze/summarize"
                   className="shrink-0 p-1.5 rounded-lg border border-nexo-border text-nexo-muted hover:bg-nexo-hover hover:text-nexo-fg disabled:opacity-30"
                 >
@@ -637,7 +653,7 @@ export function ChatArea({ modes, onOpenSidebar }: ChatAreaProps) {
                 <button
                   type="button"
                   onClick={toggleVoiceInput}
-                  disabled={sending || uploading}
+                  disabled={sending || uploading || locating}
                   title={listening ? "Stop voice input" : "Voice to text"}
                   className={`shrink-0 p-1.5 rounded-lg border text-nexo-muted hover:bg-nexo-hover hover:text-nexo-fg disabled:opacity-30 ${
                     listening ? "border-red-500/50 text-red-400" : "border-nexo-border"
@@ -652,7 +668,7 @@ export function ChatArea({ modes, onOpenSidebar }: ChatAreaProps) {
               <button
                 type="button"
                 onClick={() => void send()}
-                disabled={sending || !input.trim()}
+                disabled={sending || locating || !input.trim()}
                 className="w-9 h-9 rounded-xl nexo-btn-primary flex items-center justify-center disabled:opacity-30 hover:scale-105 active:scale-95 transition-transform duration-150"
               >
                 {sending ? (
