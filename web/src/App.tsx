@@ -7,6 +7,7 @@ import { CodePanel } from "./components/CodePanel";
 import { LandingPage } from "./components/LandingPage";
 import { AnalyticsDashboard } from "./components/AnalyticsDashboard";
 import { ProviderSettingsModal } from "./components/ProviderSettingsModal";
+import { Toast } from "./components/Toast";
 import { Sidebar } from "./components/Sidebar";
 import { trackEvent } from "./lib/analytics";
 import { fetchAuthMe, logout, type AuthSession } from "./lib/auth";
@@ -156,6 +157,7 @@ export default function App() {
       />
       <ProviderSettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       {analyticsOpen && <AnalyticsDashboard onClose={() => setAnalyticsOpen(false)} />}
+      <Toast />
     </div>
   );
 }

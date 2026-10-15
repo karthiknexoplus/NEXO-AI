@@ -27,6 +27,8 @@ import { labelForPhase } from "../lib/generationStatus";
 import { useUiStore } from "../store/uiStore";
 import { useWorkspaceId, useWorkspaceLabel } from "../hooks/useWorkspaceId";
 import { GitHubPanel } from "./GitHubPanel";
+import { PromptModal } from "./PromptModal";
+import { ConfirmModal } from "./ConfirmModal";
 
 function languageForPath(filePath: string): string {
   const ext = filePath.split(".").pop()?.toLowerCase() ?? "";
@@ -60,6 +62,7 @@ export function CodePanel() {
   const codePanelOpen = useUiStore((s) => s.codePanelOpen);
   const setCodePanelOpen = useUiStore((s) => s.setCodePanelOpen);
   const queuePrompt = useUiStore((s) => s.queuePrompt);
+  const showToast = useUiStore((s) => s.showToast);
   const bumpWorkspace = useUiStore((s) => s.bumpWorkspace);
   const theme = useThemeStore((s) => s.theme);
 
@@ -116,50 +119,87 @@ export function CodePanel() {
     try {
       await saveProjectFile(workspaceId, activeFile, content);
       setDirty(false);
+      showToast(`Saved ${activeFile}`, "success");
       bumpWorkspace();
     } finally {
       setSaving(false);
     }
   };
 
-  const newFile = async () => {
+  const [fileModalOpen, setFileModalOpen] = useState(false);
+  const [fileModalMode, setFileModalMode] = useState<"new" | "rename">("new");
+  const [fileModalInitial, setFileModalInitial] = useState("");
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+
+  const newFile = () => {
     if (!workspaceId) return;
-    const p = window.prompt("New file path", "src/new-file.ts");
-    if (!p?.trim()) return;
-    const target = p.trim();
-    try {
-      await saveProjectFile(workspaceId, target, "");
-      bumpWorkspace();
-      setActiveFile(target);
-    } catch (e) {
-      window.alert(e instanceof Error ? e.message : "Could not create file");
-    }
+    setFileModalMode("new");
+    setFileModalInitial("src/new-file.ts");
+    setFileModalOpen(true);
   };
 
-  const renameActive = async () => {
+  const renameActive = () => {
     if (!activeFile || !workspaceId) return;
-    const p = window.prompt("Rename to", activeFile);
-    if (!p?.trim() || p.trim() === activeFile) return;
-    const target = p.trim();
-    try {
-      await renameProjectFile(workspaceId, activeFile, target);
-      bumpWorkspace();
-      setActiveFile(target);
-    } catch (e) {
-      window.alert(e instanceof Error ? e.message : "Could not rename file");
-    }
+    setFileModalMode("rename");
+    setFileModalInitial(activeFile);
+    setFileModalOpen(true);
   };
 
-  const deleteActive = async () => {
+  const deleteActive = () => {
     if (!activeFile || !workspaceId) return;
-    if (!window.confirm(`Delete ${activeFile}?`)) return;
-    try {
-      await deleteProjectFile(workspaceId, activeFile);
-      bumpWorkspace();
-      setActiveFile(null);
-    } catch (e) {
-      window.alert(e instanceof Error ? e.message : "Could not delete file");
+    setConfirmDeleteOpen(true);
+  };
+
+  const submitFileModal = (value: string) => {
+    const target = value.trim();
+    if (!target || !workspaceId) {
+      setFileModalOpen(false);
+      return;
     }
+    if (fileModalMode === "new") {
+      void (async () => {
+        try {
+          await saveProjectFile(workspaceId, target, "");
+          bumpWorkspace();
+          setActiveFile(target);
+          showToast(`Created ${target}`, "success");
+        } catch (e) {
+          showToast(e instanceof Error ? e.message : "Could not create file", "error");
+        }
+      })();
+    } else if (activeFile) {
+      const from = activeFile;
+      void (async () => {
+        try {
+          await renameProjectFile(workspaceId, from, target);
+          bumpWorkspace();
+          setActiveFile(target);
+          showToast(`Renamed to ${target}`, "success");
+        } catch (e) {
+          showToast(e instanceof Error ? e.message : "Could not rename file", "error");
+        }
+      })();
+    }
+    setFileModalOpen(false);
+  };
+
+  const confirmDelete = () => {
+    if (!activeFile || !workspaceId) {
+      setConfirmDeleteOpen(false);
+      return;
+    }
+    const target = activeFile;
+    void (async () => {
+      try {
+        await deleteProjectFile(workspaceId, target);
+        bumpWorkspace();
+        setActiveFile(null);
+        showToast(`Deleted ${target}`, "success");
+      } catch (e) {
+        showToast(e instanceof Error ? e.message : "Could not delete file", "error");
+      }
+      setConfirmDeleteOpen(false);
+    })();
   };
 
   const askAboutFile = () => {
@@ -190,9 +230,9 @@ export function CodePanel() {
     try {
       const written = await importLocalFolder(workspaceId, list);
       bumpWorkspace();
-      window.alert(`Imported ${written.length} file(s) into ${workspaceLabelText}.`);
+      showToast(`Imported ${written.length} file(s) into ${workspaceLabelText}.`, "success");
     } catch (e) {
-      window.alert(e instanceof Error ? e.message : "Import failed");
+      showToast(e instanceof Error ? e.message : "Import failed", "error");
     } finally {
       setImporting(false);
       if (importInputRef.current) importInputRef.current.value = "";
@@ -418,6 +458,24 @@ export function CodePanel() {
           </div>
         </div>
         <GitHubPanel workspaceId={workspaceId} />
+        <PromptModal
+          open={fileModalOpen}
+          title={fileModalMode === "new" ? "New file" : "Rename file"}
+          label={fileModalMode === "new" ? "File path" : "New path"}
+          initialValue={fileModalInitial}
+          submitLabel={fileModalMode === "new" ? "Create" : "Rename"}
+          onClose={() => setFileModalOpen(false)}
+          onSubmit={submitFileModal}
+        />
+        <ConfirmModal
+          open={confirmDeleteOpen}
+          title="Delete file"
+          message={`Delete ${activeFile}? This cannot be undone.`}
+          confirmLabel="Delete"
+          danger
+          onClose={() => setConfirmDeleteOpen(false)}
+          onConfirm={confirmDelete}
+        />
       </div>
     </aside>
   );

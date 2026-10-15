@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import clsx from "clsx";
 import { folderNameFromFileList, importLocalFolder } from "../lib/workspace";
+import { PromptModal } from "./PromptModal";
 import { trackEvent } from "../lib/analytics";
 import { resolveWorkspaceId } from "../lib/workspaceId";
 import { useChatStore } from "../store/chatStore";
@@ -57,10 +58,12 @@ export function Sidebar({
   } = useChatStore();
   const { theme, toggle } = useThemeStore();
   const bumpWorkspace = useUiStore((s) => s.bumpWorkspace);
+  const showToast = useUiStore((s) => s.showToast);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const chatImportRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
   const [chatQuery, setChatQuery] = useState("");
+  const [projectModalOpen, setProjectModalOpen] = useState(false);
 
   const defaultProjects = projects.filter((p) => p.kind !== "imported");
   const importedProjects = projects.filter((p) => p.kind === "imported");
@@ -88,9 +91,9 @@ export function Sidebar({
       newThreadInProject(projectId);
       bumpWorkspace();
       void trackEvent("folder_imported", { fileCount: written.length, into: "new_project" });
-      window.alert(`Imported ${written.length} file(s) into folder "${name}". Start chatting to modify it.`);
+      showToast(`Imported ${written.length} file(s) into folder "${name}". Start chatting to modify it.`, "success");
     } catch (e) {
-      window.alert(e instanceof Error ? e.message : "Import failed");
+      showToast(e instanceof Error ? e.message : "Import failed", "error");
     } finally {
       setImporting(false);
       if (folderInputRef.current) folderInputRef.current.value = "";
@@ -114,9 +117,9 @@ export function Sidebar({
       const written = await importLocalFolder(workspaceId, list);
       bumpWorkspace();
       void trackEvent("folder_imported", { fileCount: written.length, into: "chat" });
-      window.alert(`Imported ${written.length} file(s) into this chat's workspace.`);
+      showToast(`Imported ${written.length} file(s) into this chat's workspace.`, "success");
     } catch (e) {
-      window.alert(e instanceof Error ? e.message : "Import failed");
+      showToast(e instanceof Error ? e.message : "Import failed", "error");
     } finally {
       setImporting(false);
       if (chatImportRef.current) chatImportRef.current.value = "";
@@ -278,13 +281,7 @@ export function Sidebar({
           </span>
           <button
             type="button"
-            onClick={() => {
-              const name = window.prompt("Project name", "New Project");
-              if (name?.trim()) {
-                newProject(name.trim());
-                void trackEvent("project_created", { name: name.trim() });
-              }
-            }}
+            onClick={() => setProjectModalOpen(true)}
             className="text-[11px] text-nexo-brand hover:underline"
           >
             + New
@@ -418,6 +415,20 @@ export function Sidebar({
           Sign out
         </button>
       </div>
+      <PromptModal
+        open={projectModalOpen}
+        title="Create project"
+        label="Project name"
+        initialValue="New Project"
+        submitLabel="Create"
+        onClose={() => setProjectModalOpen(false)}
+        onSubmit={(name) => {
+          if (!name) return;
+          newProject(name);
+          void trackEvent("project_created", { name });
+          setProjectModalOpen(false);
+        }}
+      />
     </aside>
   );
 }

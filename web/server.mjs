@@ -24,6 +24,7 @@ import {
   resolveCloudModel,
 } from "./server/cloudProvider.mjs";
 import { getAnalyticsSummary, recordAnalyticsEvent } from "./server/dataStore.mjs";
+import { PDFParse } from "pdf-parse";
 import {
   handleGitCommit,
   handleGitInit,
@@ -647,6 +648,24 @@ const server = http.createServer(async (req, res) => {
         body.to,
         safeJoin
       );
+    }
+    if (pathname === "/api/files/extract-text" && req.method === "POST") {
+      let body = {};
+      try {
+        body = JSON.parse((await readBody(req)) || "{}");
+      } catch {
+        return sendJson(res, 400, { error: "Invalid JSON" });
+      }
+      if (!body.data) return sendJson(res, 400, { error: "Missing file data" });
+      try {
+        const buffer = Buffer.from(body.data, "base64");
+        const parser = new PDFParse({ data: buffer });
+        const result = await parser.getText();
+        await parser.destroy().catch(() => {});
+        return sendJson(res, 200, { text: result.text || "", pages: result.pages?.length || result.total || 0 });
+      } catch (e) {
+        return sendJson(res, 500, { error: e instanceof Error ? e.message : "Could not read PDF" });
+      }
     }
     if (pathname === "/api/health") {
       const backend = intelligenceBackend();

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { ArrowUp, Copy, FileCode2, Loader2, Menu, MessageSquarePlus, Pencil, RotateCcw, Square } from "lucide-react";
+import { ArrowUp, Copy, FileCode2, Loader2, Menu, MessageSquarePlus, Mic, MicOff, Paperclip, Pencil, RotateCcw, Square } from "lucide-react";
 import clsx from "clsx";
 import {
   abortIntelligenceChat,
@@ -22,6 +22,16 @@ interface ChatAreaProps {
   onOpenSidebar?: () => void;
 }
 
+function extractMarkdownText(node: unknown): string {
+  if (typeof node === "string") return node;
+  if (Array.isArray(node)) return node.map(extractMarkdownText).join("");
+  if (node && typeof node === "object" && "props" in (node as Record<string, unknown>)) {
+    const props = (node as { props?: { children?: unknown } }).props;
+    if (props?.children !== undefined) return extractMarkdownText(props.children);
+  }
+  return "";
+}
+
 export function ChatArea({ modes, onOpenSidebar }: ChatAreaProps) {
   const {
     threads,
@@ -37,6 +47,11 @@ export function ChatArea({ modes, onOpenSidebar }: ChatAreaProps) {
   const workspaceId = useWorkspaceId();
   const thread = threads.find((t) => t.id === activeThreadId);
   const [input, setInput] = useState("");
+  const [dragging, setDragging] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [listening, setListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftContent, setDraftContent] = useState("");
   const [sending, setSending] = useState(false);
@@ -53,6 +68,7 @@ export function ChatArea({ modes, onOpenSidebar }: ChatAreaProps) {
   const setOpenFilePath = useUiStore((s) => s.setOpenFilePath);
   const setCodePanelOpen = useUiStore((s) => s.setCodePanelOpen);
   const queuePrompt = useUiStore((s) => s.queuePrompt);
+  const showToast = useUiStore((s) => s.showToast);
 
   const activeMode =
     modes.find((m) => m.id === intelligenceMode) ?? modes[1] ?? modes[0];
@@ -237,8 +253,142 @@ export function ChatArea({ modes, onOpenSidebar }: ChatAreaProps) {
     setActiveThread(id);
   };
 
+  const handleFilesForSummary = async (files: FileList | null) => {
+    if (!files?.length) return;
+    if (sending) {
+      showToast("Wait for the current response to finish first.", "error");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+    setUploading(true);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    const parts: string[] = [];
+    for (const file of Array.from(files)) {
+      const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+      if (file.type.startsWith("image/")) {
+        showToast(`Image files cannot be summarized as text (${file.name}).`, "error");
+        continue;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        parts.push(`File: \`${file.name}\`\n\n[Skipped: larger than 5MB]`);
+        continue;
+      }
+      if (isPdf) {
+        try {
+          const buf = await file.arrayBuffer();
+          const bytes = new Uint8Array(buf);
+          let binary = "";
+          for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+          const base64 = btoa(binary);
+          const res = await fetch("/api/files/extract-text", {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ data: base64 }),
+          });
+          if (!res.ok) {
+            const err = (await res.json().catch(() => ({}))) as { error?: string };
+            throw new Error(err.error || "Could not read PDF");
+          }
+          const data = (await res.json()) as { text?: string };
+          const clipped = (data.text || "").slice(0, 40000);
+          parts.push(`File: \`${file.name}\` (PDF)\n\`\`\`\n${clipped || "[No text extracted]"}\n\`\`\``);
+        } catch (e) {
+          parts.push(`File: \`${file.name}\` (PDF)\n\n[Could not read PDF: ${e instanceof Error ? e.message : "unknown"}]`);
+        }
+        continue;
+      }
+      if (file.size > 200 * 1024) {
+        parts.push(`File: \`${file.name}\`\n\n[Skipped: larger than 200KB]`);
+        continue;
+      }
+      try {
+        const text = await file.text();
+        const clipped = text.slice(0, 40000);
+        parts.push(`File: \`${file.name}\`\n\`\`\`\n${clipped}\n\`\`\``);
+      } catch {
+        parts.push(`File: \`${file.name}\`\n\n[Could not read as text]`);
+      }
+    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (parts.length === 0) {
+      setUploading(false);
+      return;
+    }
+    const prompt = [
+      "Please analyze, explain, and summarize the uploaded file(s).",
+      "Include: purpose, key functions/components, dependencies, possible bugs, and recommended improvements.",
+      "",
+      ...parts,
+    ].join("\n");
+    setUploading(false);
+    showToast(`Added ${parts.length} file(s) to the prompt for analysis.`, "success");
+    void send(prompt);
+  };
+
+  const toggleVoiceInput = () => {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) {
+      showToast("Voice input is not supported in this browser.", "error");
+      return;
+    }
+    if (listening) {
+      recognitionRef.current?.stop();
+      setListening(false);
+      return;
+    }
+    const rec = new SR();
+    rec.lang = "en-US";
+    rec.continuous = true;
+    rec.interimResults = true;
+    const base = input;
+    let finalText = "";
+    rec.onresult = (event: any) => {
+      let interim = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const chunk = event.results[i][0]?.transcript || "";
+        if (event.results[i].isFinal) finalText += `${chunk} `;
+        else interim += chunk;
+      }
+      setInput(`${base}${base ? " " : ""}${finalText}${interim}`.trimStart());
+    };
+    rec.onerror = () => {
+      setListening(false);
+      showToast("Voice input error.", "error");
+    };
+    rec.onend = () => setListening(false);
+    recognitionRef.current = rec;
+    try {
+      rec.start();
+      setListening(true);
+    } catch {
+      showToast("Could not start voice input.", "error");
+    }
+  };
+
   return (
-    <main className="flex-1 flex flex-col min-w-0 nexo-glass bg-nexo-panel border border-nexo-border rounded-2xl overflow-hidden transition-colors duration-300">
+    <main
+      className="flex-1 flex flex-col min-w-0 nexo-glass bg-nexo-panel border border-nexo-border rounded-2xl overflow-hidden transition-colors duration-300 relative"
+      onDragEnter={(e) => {
+        e.preventDefault();
+        if (e.dataTransfer?.files?.length) setDragging(true);
+      }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+      }}
+      onDragLeave={() => setDragging(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setDragging(false);
+        void handleFilesForSummary(e.dataTransfer?.files || null);
+      }}
+    >
+      {dragging && (
+        <div className="absolute inset-0 z-40 flex items-center justify-center rounded-2xl bg-nexo-composer/90 border-2 border-dashed border-nexo-brand text-nexo-fg pointer-events-none">
+          <span className="font-medium">Drop files to analyze & summarize</span>
+        </div>
+      )}
       <header className="shrink-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-3 sm:px-6 py-3 sm:py-0 sm:h-14 border-b border-nexo-border">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           {onOpenSidebar && (
@@ -326,6 +476,9 @@ export function ChatArea({ modes, onOpenSidebar }: ChatAreaProps) {
               <p className="mt-3 text-[12px] text-nexo-muted max-w-md mx-auto">
                 Code-focused: software development tasks only. Not for web browsing, surfing, or general research.
               </p>
+              <p className="mt-3 text-[11px] text-nexo-muted max-w-md mx-auto">
+                Use the paperclip or drag-and-drop to upload files (including PDFs) for summary/analysis, and the mic icon for voice input.
+              </p>
               <div className="grid gap-2.5 mt-10 max-w-lg mx-auto text-left">
                 {[
                   "Build a todo API — create all files for a Node backend",
@@ -377,7 +530,28 @@ export function ChatArea({ modes, onOpenSidebar }: ChatAreaProps) {
                         </div>
                       ) : m.content ? (
                         <>
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            components={{
+                              pre({ children }) {
+                                const text = extractMarkdownText(children);
+                                return (
+                                  <div className="relative group my-3">
+                                    <button
+                                      type="button"
+                                      onClick={() => void copyMessage(text)}
+                                      className="absolute right-2 top-2 text-[10px] px-2 py-1 rounded-md border border-nexo-border bg-nexo-composer text-nexo-muted hover:text-nexo-fg opacity-0 group-hover:opacity-100 transition"
+                                    >
+                                      Copy code
+                                    </button>
+                                    <pre>{children}</pre>
+                                  </div>
+                                );
+                              },
+                            }}
+                          >
+                            {m.content}
+                          </ReactMarkdown>
                           {sending &&
                             m.id === streamingAssistantId &&
                             generationPhase &&
@@ -428,6 +602,13 @@ export function ChatArea({ modes, onOpenSidebar }: ChatAreaProps) {
               "focus-within:ring-2 focus-within:ring-[color-mix(in_srgb,var(--nexo-brand)_35%,transparent)] focus-within:border-[color-mix(in_srgb,var(--nexo-brand)_40%,transparent)]"
             )}
           >
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={(e) => void handleFilesForSummary(e.target.files)}
+            />
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -443,9 +624,31 @@ export function ChatArea({ modes, onOpenSidebar }: ChatAreaProps) {
               className="w-full resize-y min-h-[88px] max-h-[40vh] bg-transparent px-4 pt-4 pb-2 text-[14px] placeholder:text-nexo-muted focus:outline-none"
             />
             <div className="flex items-center justify-between px-3 pb-3">
-              <span className="text-[11px] text-nexo-muted pl-1">
-                {activeMode?.label ?? "NEXOPLUS Smart"}
-              </span>
+              <div className="flex items-center gap-2 pl-1">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={sending || uploading}
+                  title="Upload file to analyze/summarize"
+                  className="p-1.5 rounded-lg border border-nexo-border text-nexo-muted hover:bg-nexo-hover hover:text-nexo-fg disabled:opacity-30"
+                >
+                  {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Paperclip className="w-3.5 h-3.5" />}
+                </button>
+                <button
+                  type="button"
+                  onClick={toggleVoiceInput}
+                  disabled={sending || uploading}
+                  title={listening ? "Stop voice input" : "Voice to text"}
+                  className={`p-1.5 rounded-lg border text-nexo-muted hover:bg-nexo-hover hover:text-nexo-fg disabled:opacity-30 ${
+                    listening ? "border-red-500/50 text-red-400" : "border-nexo-border"
+                  }`}
+                >
+                  {listening ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+                </button>
+                <span className="text-[11px] text-nexo-muted">
+                  {activeMode?.label ?? "NEXOPLUS Smart"}
+                </span>
+              </div>
               <button
                 type="button"
                 onClick={() => void send()}

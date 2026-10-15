@@ -3,13 +3,13 @@ import type { GenerationPhase } from "../store/uiStore";
 export function labelForPhase(phase: GenerationPhase, detail: string | null): string {
   switch (phase) {
     case "thinking":
-      return "Thinking…";
+      return "Thinking about your request…";
     case "drafting":
-      return detail?.startsWith("Part") ? `${detail} — drafting…` : "Drafting response…";
+      return detail?.startsWith("Part") ? `${detail} — drafting response…` : "Drafting response…";
     case "files":
       return detail ? `Writing ${detail}…` : "Generating project files…";
     case "saving":
-      return "Saving to project workspace…";
+      return "Saving generated files to workspace…";
     default:
       return "";
   }
