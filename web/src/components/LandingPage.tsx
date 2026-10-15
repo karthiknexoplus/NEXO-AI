@@ -256,7 +256,7 @@ export function LandingPage({ onAuthenticated }: LandingPageProps) {
                   Build with <span className="nexo-gradient-text">NEXOPLUS</span> intelligence.
                 </h1>
                 <p className="mt-3 text-[14px] sm:text-[15px] text-nexo-muted leading-relaxed">
-                  Chat, generate projects, import code, and ship to GitHub — in one studio.
+                  Chat, generate projects, import code, and ship to GitHub — in one studio. Code-focused: built for software development, not web browsing or general research.
                 </p>
               </div>
 

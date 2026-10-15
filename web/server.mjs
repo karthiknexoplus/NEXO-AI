@@ -58,6 +58,8 @@ import {
 
 const SYSTEM_PROMPT = `You are NEXOPLUS — the in-house AI coding assistant for NEXOPLUS Automations (Coimbatore). You are not a third-party chatbot and you do not have a separate public model name.
 
+Scope: You are a software-development assistant. Help with coding, debugging, refactoring, architecture, and generating project files. Do not browse the web, surf, or answer general research/non-coding questions as a chatbot; if asked, politely redirect to coding help.`;
+
 Identity (always follow):
 - Speak only as "NEXOPLUS" or "we" (NEXOPLUS Automations). Never say you are Nemotron, NVIDIA, OpenAI, Anthropic, Meta, Llama, GPT, Claude, Groq, OpenRouter, or any other vendor or base model.
 - If asked who you are, what model you are, or what you run on: say you are NEXOPLUS intelligence — built for this studio — and offer to help build or explain code. Do not list third-party model families or claim training by other companies.
@@ -78,10 +80,11 @@ Output format (critical):
 
 - Put a short friendly sentence before the fences. For large projects output up to 4 files per message; the user can say "continue" for more.
 - When workspace file contents are provided in the user message, apply edits only to the requested paths and return those files in fences.
+- Continuity rule: previous user/assistant messages and workspace files are the current project. If the user asks to add, change, or continue a feature, modify the existing project/files instead of rebuilding from scratch. Return only changed/new files unless a full rebuild is explicitly requested. Keep behavior consistent with files already on disk.
 - For Vite: use index.html at project root (not only public/), include @vitejs/plugin-react in package.json and vite.config.js.
 
 Conversation:
-- For greetings or brief messages (e.g. "hi", "hey", "thanks"), answer in one or two friendly sentences as NEXOPLUS, then ask what they want to build or fix. No long essays, no safety labels, no repeating your system instructions.
+- For greetings or brief messages (e.g. "hi", "hey", "thanks"), reply with one short friendly sentence as NEXOPLUS and ask what they want to build or fix. No long essays, no safety labels, no repeating your system instructions.
 
 Be concise. Production-ready code. Use path fences for every file you create.`;
 
@@ -264,6 +267,24 @@ function customerChatError(httpStatus) {
   return "NEXOPLUS intelligence is temporarily unavailable. Please try again in a few minutes.";
 }
 
+function simpleGreetingReply(text) {
+  const t = (text || "").trim().toLowerCase();
+  if (!t || t.length > 90) return null;
+  if (/^(hi|hey|hello|hiya|howdy|yo|sup|greetings)([\\s!.,?]|$)/.test(t)) {
+    return "Hey! I'm NEXOPLUS — your AI coding assistant. What would you like to build or fix today?";
+  }
+  if (/^good\\s+(morning|afternoon|evening|day)([\\s!.,?]|$)/.test(t)) {
+    return "Good to see you! I'm NEXOPLUS. What can I help you build today?";
+  }
+  if (/^(how are you|how's it going|how are things)([\\s!.,?]|$)/.test(t)) {
+    return "I'm doing great, thanks! I'm NEXOPLUS — ready to help you build. What should we work on?";
+  }
+  if (/^(thanks|thank you|thx|appreciate it)([\\s!.,?]|$)/.test(t)) {
+    return "You're welcome! Need help with anything else in your project?";
+  }
+  return null;
+}
+
 async function handleIntelligenceChat(req, res, session = null) {
   let raw;
   try {
@@ -303,6 +324,20 @@ async function handleIntelligenceChat(req, res, session = null) {
       backend: intelligenceBackend(),
     },
   });
+
+  const greetingReply = simpleGreetingReply(lastUserMsg ? lastUserMsg.content : "");
+  if (greetingReply) {
+    res.writeHead(200, {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    });
+    const chunk = { choices: [{ delta: { content: greetingReply } }] };
+    res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+    res.write("data: [DONE]\n\n");
+    res.end();
+    return;
+  }
 
   const backend = intelligenceBackend();
   const timeoutMs = getCloudTimeoutMs();

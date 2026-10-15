@@ -87,7 +87,17 @@ export function ChatArea({ modes, onOpenSidebar }: ChatAreaProps) {
     const history =
       current?.messages
         .filter((m) => m.id !== assistantId && m.content.trim())
-        .map((m) => ({ role: m.role, content: m.content })) ?? [];
+        .map((m) => {
+          // Keep prompts intact; condense very long assistant turns to stay in context budget.
+          // The saved workspace files below remain the source of truth.
+          if (m.role === "assistant" && m.content.length > 1500) {
+            return {
+              role: m.role,
+              content: `${m.content.slice(0, 900)}\n\n[...earlier response condensed — ${m.content.length} chars; see workspace files above/below...]\n`,
+            };
+          }
+          return { role: m.role, content: m.content };
+        }) ?? [];
 
     try {
       const wsId = workspaceId ?? threadId;
@@ -241,7 +251,10 @@ export function ChatArea({ modes, onOpenSidebar }: ChatAreaProps) {
                 What should we build?
               </h2>
               <p className="text-nexo-muted text-[15px] max-w-md mx-auto leading-relaxed">
-                Describe your idea — get instant answers, code, and downloadable project files.
+                Describe your app or fix — NEXOPLUS writes, fixes, and refactors code and generates project files you can download.
+              </p>
+              <p className="mt-3 text-[12px] text-nexo-muted max-w-md mx-auto">
+                Code-focused: software development tasks only. Not for web browsing, surfing, or general research.
               </p>
               <div className="grid gap-2.5 mt-10 max-w-lg mx-auto text-left">
                 {[

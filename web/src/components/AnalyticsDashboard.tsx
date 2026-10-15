@@ -104,7 +104,7 @@ function eventLabel(type: string): string {
 
 function Kpi({ label, value, sub }: { label: string; value: number | string; sub?: string }) {
   return (
-    <div className="rounded-xl border border-nexo-border bg-nexo-panel/95 p-4 shadow-sm">
+    <div className="rounded-xl border border-nexo-border bg-nexo-composer/95 p-4 shadow-sm">
       <div className="text-[11px] uppercase tracking-wider text-nexo-muted">{label}</div>
       <div className="mt-1 font-display text-2xl font-bold text-nexo-fg">{value}</div>
       {sub && <div className="text-[11px] text-nexo-muted mt-1">{sub}</div>}
@@ -203,7 +203,7 @@ export function AnalyticsDashboard({ onClose }: Props) {
                 <Kpi label="Top mode" value={summary.insights.topMode || "—"} sub={`7d prompts: ${summary.insights.last7dChats}`} />
               </div>
 
-              <section className="rounded-xl border border-nexo-border bg-nexo-panel/95 p-4 shadow-sm">
+              <section className="rounded-xl border border-nexo-border bg-nexo-composer/95 p-4 shadow-sm">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-[13px] font-semibold text-nexo-fg">Daily prompts (14 days)</h3>
                   <span className="text-[11px] text-nexo-muted">max {maxChat}</span>
@@ -226,7 +226,7 @@ export function AnalyticsDashboard({ onClose }: Props) {
                 </div>
               </section>
 
-              <section className="rounded-xl border border-nexo-border bg-nexo-panel/95 p-4 shadow-sm">
+              <section className="rounded-xl border border-nexo-border bg-nexo-composer/95 p-4 shadow-sm">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-[13px] font-semibold text-nexo-fg">Daily active users (14 days)</h3>
                   <span className="text-[11px] text-nexo-muted">max {maxActive}</span>
@@ -250,7 +250,7 @@ export function AnalyticsDashboard({ onClose }: Props) {
               </section>
 
               <div className="grid sm:grid-cols-2 gap-4">
-                <section className="rounded-xl border border-nexo-border bg-nexo-panel/95 p-4 shadow-sm">
+                <section className="rounded-xl border border-nexo-border bg-nexo-composer/95 p-4 shadow-sm">
                   <h3 className="text-[13px] font-semibold text-nexo-fg mb-3">Mode distribution</h3>
                   <div className="space-y-2">
                     {summary.modes.length === 0 && <p className="text-[12px] text-nexo-muted">No data yet</p>}
@@ -271,7 +271,7 @@ export function AnalyticsDashboard({ onClose }: Props) {
                   </div>
                 </section>
 
-                <section className="rounded-xl border border-nexo-border bg-nexo-panel/95 p-4 shadow-sm">
+                <section className="rounded-xl border border-nexo-border bg-nexo-composer/95 p-4 shadow-sm">
                   <h3 className="text-[13px] font-semibold text-nexo-fg mb-3">Event types</h3>
                   <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
                     {summary.eventTypes.map((e) => (
@@ -284,7 +284,7 @@ export function AnalyticsDashboard({ onClose }: Props) {
                 </section>
               </div>
 
-              <section className="rounded-xl border border-nexo-border bg-nexo-panel/95 p-4 shadow-sm">
+              <section className="rounded-xl border border-nexo-border bg-nexo-composer/95 p-4 shadow-sm">
                 <h3 className="text-[13px] font-semibold text-nexo-fg mb-3 flex items-center gap-2">
                   <SearchIcon className="w-4 h-4" /> Top queries / searches
                 </h3>
@@ -316,7 +316,7 @@ export function AnalyticsDashboard({ onClose }: Props) {
               </section>
 
               <div className="grid sm:grid-cols-2 gap-4">
-                <section className="rounded-xl border border-nexo-border bg-nexo-panel/95 p-4 shadow-sm">
+                <section className="rounded-xl border border-nexo-border bg-nexo-composer/95 p-4 shadow-sm">
                   <h3 className="text-[13px] font-semibold text-nexo-fg mb-3 flex items-center gap-2">
                     <Users className="w-4 h-4" /> Top users
                   </h3>
@@ -344,7 +344,7 @@ export function AnalyticsDashboard({ onClose }: Props) {
                   </div>
                 </section>
 
-                <section className="rounded-xl border border-nexo-border bg-nexo-panel/95 p-4 shadow-sm">
+                <section className="rounded-xl border border-nexo-border bg-nexo-composer/95 p-4 shadow-sm">
                   <h3 className="text-[13px] font-semibold text-nexo-fg mb-3 flex items-center gap-2">
                     <Activity className="w-4 h-4" /> Recent activity
                   </h3>
@@ -367,7 +367,7 @@ export function AnalyticsDashboard({ onClose }: Props) {
                 </section>
               </div>
 
-              <section className="rounded-xl border border-nexo-border bg-nexo-panel/95 p-4 shadow-sm">
+              <section className="rounded-xl border border-nexo-border bg-nexo-composer/95 p-4 shadow-sm">
                 <h3 className="text-[13px] font-semibold text-nexo-fg mb-3">Activity by hour (30 days)</h3>
                 <div className="flex items-end gap-0.5 h-20">
                   {summary.hourDistribution.map((c, h) => {
