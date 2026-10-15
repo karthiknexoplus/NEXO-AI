@@ -24,7 +24,6 @@ import {
   resolveCloudModel,
 } from "./server/cloudProvider.mjs";
 import { getAnalyticsSummary, recordAnalyticsEvent } from "./server/dataStore.mjs";
-import { PDFParse } from "pdf-parse";
 import {
   handleGitCommit,
   handleGitInit,
@@ -658,13 +657,18 @@ const server = http.createServer(async (req, res) => {
       }
       if (!body.data) return sendJson(res, 400, { error: "Missing file data" });
       try {
+        const { PDFParse } = await import("pdf-parse");
         const buffer = Buffer.from(body.data, "base64");
         const parser = new PDFParse({ data: buffer });
         const result = await parser.getText();
         await parser.destroy().catch(() => {});
         return sendJson(res, 200, { text: result.text || "", pages: result.pages?.length || result.total || 0 });
       } catch (e) {
-        return sendJson(res, 500, { error: e instanceof Error ? e.message : "Could not read PDF" });
+        const msg = e instanceof Error ? e.message : "Could not read PDF";
+        if (msg.includes("Cannot find package") || msg.includes("ERR_MODULE_NOT_FOUND")) {
+          return sendJson(res, 503, { error: "PDF support is not installed on this server yet." });
+        }
+        return sendJson(res, 500, { error: msg });
       }
     }
     if (pathname === "/api/health") {
