@@ -67,8 +67,25 @@ export function ChatArea({ modes, onOpenSidebar }: ChatAreaProps) {
   }, [pendingPrompt, pendingAutoSend]);
 
   const send = async (overrideText?: string) => {
-    const text = (overrideText ?? input).trim();
-    if (!text || sending) return;
+    const rawText = (overrideText ?? input).trim();
+    if (!rawText || sending) return;
+
+    let text = rawText;
+    if (rawText.startsWith("/")) {
+      const parts = rawText.slice(1).split(/\\s+(.+)/s);
+      const cmd = (parts[0] || "").toLowerCase();
+      const arg = parts[1] || "";
+      const cmdMap: Record<string, string> = {
+        fix: `Fix these issues in the current project/workspace: ${arg || "identify and fix bugs from the project files"}. Apply minimal safe edits and output changed files in path fences.`,
+        feature: `Implement this feature in the current project/workspace: ${arg}. Reuse existing structure and output changed/new files in path fences.`,
+        add: `Implement this feature in the current project/workspace: ${arg}. Reuse existing structure and output changed/new files in path fences.`,
+        refactor: `Refactor the current project/workspace for clarity and maintainability: ${arg || "improve code structure without behavior changes"}. Output changed files in path fences.`,
+        tests: `Add or improve tests for the current project/workspace${arg ? ` focusing on: ${arg}` : ""}. Output test files in path fences.`,
+        explain: `Explain the current project/workspace${arg ? ` focusing on: ${arg}` : ""}. No file changes.`,
+        improve: `Improve UX and robustness of the current project/workspace: ${arg || "make meaningful enhancements"}. Output changed files in path fences.`,
+      };
+      if (cmdMap[cmd]) text = cmdMap[cmd];
+    }
 
     let threadId = activeThreadId;
     if (!threadId) threadId = newThread();

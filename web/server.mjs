@@ -48,10 +48,12 @@ import {
 import { streamSanitizedSseToClient } from "./server/sanitizeStream.mjs";
 import {
   handleClearProject,
+  handleDeleteFile,
   handleDownloadZip,
   handleImportFiles,
   handleListFiles,
   handleReadFile,
+  handleRenameFile,
   handleWriteFile,
   projectDir,
 } from "./server/workspaceApi.mjs";
@@ -578,6 +580,37 @@ const server = http.createServer(async (req, res) => {
       if (!session) return sendJson(res, 401, { error: "Sign in required" });
       if (!session.canManageSettings) return sendJson(res, 403, { error: "Admin only" });
       return sendJson(res, 200, getAnalyticsSummary());
+    }
+    if (pathname === "/api/workspace/file" && req.method === "DELETE") {
+      let body = {};
+      try {
+        body = JSON.parse((await readBody(req)) || "{}");
+      } catch {
+        return sendJson(res, 400, { error: "Invalid JSON" });
+      }
+      return handleDeleteFile(
+        res,
+        WORKSPACE_ROOT,
+        body.projectId,
+        body.path,
+        safeJoin
+      );
+    }
+    if (pathname === "/api/workspace/file/rename" && req.method === "POST") {
+      let body = {};
+      try {
+        body = JSON.parse((await readBody(req)) || "{}");
+      } catch {
+        return sendJson(res, 400, { error: "Invalid JSON" });
+      }
+      return handleRenameFile(
+        res,
+        WORKSPACE_ROOT,
+        body.projectId,
+        body.from,
+        body.to,
+        safeJoin
+      );
     }
     if (pathname === "/api/health") {
       const backend = intelligenceBackend();

@@ -125,3 +125,38 @@ function sendJson(res, status, data) {
   res.writeHead(status, { "Content-Type": "application/json" });
   res.end(JSON.stringify(data));
 }
+
+export function handleDeleteFile(res, root, projectId, filePath, safeJoin) {
+  try {
+    const dir = projectDir(root, projectId || "default");
+    const abs = safeJoin(dir, filePath);
+    if (fs.existsSync(abs)) {
+      const stat = fs.statSync(abs);
+      if (stat.isDirectory()) {
+        fs.rmSync(abs, { recursive: true, force: true });
+      } else {
+        fs.unlinkSync(abs);
+      }
+    }
+    sendJson(res, 200, { ok: true });
+  } catch (e) {
+    res.writeHead(500, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: e instanceof Error ? e.message : "Delete failed" }));
+  }
+}
+
+export function handleRenameFile(res, root, projectId, fromPath, toPath, safeJoin) {
+  try {
+    const dir = projectDir(root, projectId || "default");
+    const absFrom = safeJoin(dir, fromPath);
+    const absTo = safeJoin(dir, toPath);
+    if (!fs.existsSync(absFrom)) throw new Error("Source path does not exist");
+    if (fs.existsSync(absTo)) throw new Error("Target path already exists");
+    fs.mkdirSync(path.dirname(absTo), { recursive: true });
+    fs.renameSync(absFrom, absTo);
+    sendJson(res, 200, { ok: true });
+  } catch (e) {
+    res.writeHead(500, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: e instanceof Error ? e.message : "Rename failed" }));
+  }
+}

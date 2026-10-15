@@ -110,6 +110,32 @@ export async function importLocalFolder(
   return data.written ?? [];
 }
 
+export async function deleteProjectFile(projectId: string, filePath: string): Promise<void> {
+  const res = await fetch("/api/workspace/file", {
+    ...fetchOpts,
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ projectId, path: filePath }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error || "Could not delete file");
+  }
+}
+
+export async function renameProjectFile(projectId: string, from: string, to: string): Promise<void> {
+  const res = await fetch("/api/workspace/file/rename", {
+    ...fetchOpts,
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ projectId, from, to }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error || "Could not rename file");
+  }
+}
+
 export function downloadProjectZip(projectId: string): void {
   const url = `/api/workspace/download?projectId=${encodeURIComponent(projectId)}`;
   const a = document.createElement("a");

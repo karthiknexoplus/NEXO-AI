@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Editor from "@monaco-editor/react";
 import {
+  Bug,
   FileCode2,
+  FilePlus,
   FolderUp,
+  Pencil,
+  Trash2,
   Loader2,
   MessageSquare,
   PanelRightClose,
@@ -11,9 +15,11 @@ import {
 } from "lucide-react";
 import clsx from "clsx";
 import {
+  deleteProjectFile,
   importLocalFolder,
   listProjectFiles,
   readProjectFile,
+  renameProjectFile,
   saveProjectFile,
 } from "../lib/workspace";
 import { useThemeStore } from "../store/themeStore";
@@ -116,6 +122,46 @@ export function CodePanel() {
     }
   };
 
+  const newFile = async () => {
+    if (!workspaceId) return;
+    const p = window.prompt("New file path", "src/new-file.ts");
+    if (!p?.trim()) return;
+    const target = p.trim();
+    try {
+      await saveProjectFile(workspaceId, target, "");
+      bumpWorkspace();
+      setActiveFile(target);
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : "Could not create file");
+    }
+  };
+
+  const renameActive = async () => {
+    if (!activeFile || !workspaceId) return;
+    const p = window.prompt("Rename to", activeFile);
+    if (!p?.trim() || p.trim() === activeFile) return;
+    const target = p.trim();
+    try {
+      await renameProjectFile(workspaceId, activeFile, target);
+      bumpWorkspace();
+      setActiveFile(target);
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : "Could not rename file");
+    }
+  };
+
+  const deleteActive = async () => {
+    if (!activeFile || !workspaceId) return;
+    if (!window.confirm(`Delete ${activeFile}?`)) return;
+    try {
+      await deleteProjectFile(workspaceId, activeFile);
+      bumpWorkspace();
+      setActiveFile(null);
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : "Could not delete file");
+    }
+  };
+
   const askAboutFile = () => {
     if (!activeFile) return;
     const snippet = content.length > 12000 ? `${content.slice(0, 12000)}\n…` : content;
@@ -123,6 +169,19 @@ export function CodePanel() {
       `In workspace file \`${activeFile}\`, please modify or explain as needed:\n\n\`\`\`\n${snippet}\n\`\`\`\n\nWhat I want:`,
       false
     );
+  };
+
+  const fixActiveFile = () => {
+    if (!activeFile) return;
+    queuePrompt(`Fix bugs, edge cases, and TypeScript/runtime issues in \`${activeFile}\`. Keep changes minimal and preserve existing behavior. Output the updated file in a path fence.`, false);
+  };
+  const refactorActiveFile = () => {
+    if (!activeFile) return;
+    queuePrompt(`Refactor \`${activeFile}\` for clarity and maintainability without changing behavior. Output the updated file in a path fence.`, false);
+  };
+  const testActiveFile = () => {
+    if (!activeFile) return;
+    queuePrompt(`Create or improve tests for \`${activeFile}\` and related code. Output test files in path fences.`, false);
   };
 
   const onImportToWorkspace = async (list: FileList | null) => {
@@ -193,6 +252,15 @@ export function CodePanel() {
           />
           <button
             type="button"
+            disabled={!workspaceId}
+            onClick={() => void newFile()}
+            className="p-1.5 rounded-md hover:bg-nexo-hover text-nexo-muted disabled:opacity-30"
+            title="New file"
+          >
+            <FilePlus className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
             disabled={!workspaceId || importing}
             onClick={() => importInputRef.current?.click()}
             className="p-1.5 rounded-md hover:bg-nexo-hover text-nexo-muted disabled:opacity-30"
@@ -208,6 +276,33 @@ export function CodePanel() {
             title="Ask NEXOPLUS to change this file"
           >
             <MessageSquare className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            disabled={!activeFile}
+            onClick={fixActiveFile}
+            className="p-1.5 rounded-md hover:bg-nexo-hover text-nexo-muted disabled:opacity-30"
+            title="Fix this file"
+          >
+            <Bug className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            disabled={!activeFile}
+            onClick={renameActive}
+            className="p-1.5 rounded-md hover:bg-nexo-hover text-nexo-muted disabled:opacity-30"
+            title="Rename file"
+          >
+            <Pencil className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            disabled={!activeFile}
+            onClick={() => void deleteActive()}
+            className="p-1.5 rounded-md hover:bg-nexo-hover text-red-400 disabled:opacity-30"
+            title="Delete file"
+          >
+            <Trash2 className="w-4 h-4" />
           </button>
           <button
             type="button"
@@ -269,6 +364,23 @@ export function CodePanel() {
                 <div className="px-3 py-1.5 text-[10px] font-mono text-nexo-muted border-b border-nexo-border truncate">
                   {activeFile}
                   {dirty ? " · unsaved" : ""}
+                </div>
+                <div className="px-3 py-1.5 flex flex-wrap gap-1.5 border-b border-nexo-border">
+                  {[
+                    { label: "Fix", onClick: fixActiveFile },
+                    { label: "Refactor", onClick: refactorActiveFile },
+                    { label: "Tests", onClick: testActiveFile },
+                    { label: "Chat", onClick: askAboutFile },
+                  ].map((a) => (
+                    <button
+                      key={a.label}
+                      type="button"
+                      onClick={a.onClick}
+                      className="text-[10px] px-2 py-1 rounded-md border border-nexo-border bg-nexo-composer text-nexo-muted hover:text-nexo-fg hover:bg-nexo-hover"
+                    >
+                      {a.label}
+                    </button>
+                  ))}
                 </div>
                 <div className="flex-1 min-h-0">
                   <Editor
