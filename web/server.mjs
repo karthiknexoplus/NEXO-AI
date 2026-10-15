@@ -60,7 +60,7 @@ import {
 
 const SYSTEM_PROMPT = `You are NEXOPLUS — the in-house AI coding assistant for NEXOPLUS Automations (Coimbatore). You are not a third-party chatbot and you do not have a separate public model name.
 
-Scope: You are a software-development assistant. Help with coding, debugging, refactoring, architecture, and generating project files. Do not browse the web, surf, or answer general research/non-coding questions as a chatbot; if asked, politely redirect to coding help.
+Scope: You are a software-development assistant. Help with coding, debugging, refactoring, architecture, and generating project files. When web search results are included in the conversation, you may answer general factual questions grounded on those results. Do not browse or surf the web beyond the provided search results.
 
 Identity (always follow):
 - Speak only as "NEXOPLUS" or "we" (NEXOPLUS Automations). Never say you are Nemotron, NVIDIA, OpenAI, Anthropic, Meta, Llama, GPT, Claude, Groq, OpenRouter, or any other vendor or base model.
@@ -270,6 +270,64 @@ function customerChatError(httpStatus) {
   return "NEXOPLUS intelligence is temporarily unavailable. Please try again in a few minutes.";
 }
 
+function decodeHtmlEntities(value) {
+  return String(value || "")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, " ");
+}
+
+function stripTags(value) {
+  return decodeHtmlEntities(String(value || "").replace(/<[^>]*>/g, " ")).replace(/\s+/g, " ").trim();
+}
+
+async function webSearch(query) {
+  const q = (query || "").trim();
+  if (!q) return [];
+  const body = new URLSearchParams({ q, b: "", kl: "us-en" }).toString();
+  const res = await fetch("https://html.duckduckgo.com/html/", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    },
+    body,
+  });
+  if (!res.ok) return [];
+  const html = await res.text();
+  const results = [];
+  const linkRe = /<a[^>]*class="result__a"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
+  const snippetRe = /<a[^>]*class="result__snippet"[^>]*>([\s\S]*?)<\/a>/gi;
+  const links = Array.from(html.matchAll(linkRe));
+  const snippets = Array.from(html.matchAll(snippetRe));
+  // Search completed.
+  const count = Math.min(links.length, 8);
+  for (let i = 0; i < count; i++) {
+    const href = links[i][1];
+    const title = stripTags(links[i][2]);
+    const snippet = stripTags(snippets[i] ? snippets[i][1] : "");
+    if (title && href) results.push({ title, url: href, snippet });
+  }
+  return results;
+}
+
+function extractSearchQuery(text) {
+  const t = (text || "").trim();
+  if (!t) return null;
+  let m = t.match(/^\/(search|web|google|lookup)\s+(.+)$/i);
+  if (m && m[2].trim()) return m[2].trim();
+  m = t.match(/\b(?:search (?:the )?(?:web|internet|online)|look up|google)\b[:\s]*(.*)$/i);
+  if (m) {
+    const q = (m[1] || "").trim();
+    if (q) return q;
+    return t.replace(/\b(search (?:the )?(?:web|internet|online)|look up|google)\b/gi, "").trim() || null;
+  }
+  return null;
+}
+
 function simpleGreetingReply(text) {
   const raw = (text || "").trim().toLowerCase();
   if (!raw || raw.length > 140) return null;
@@ -338,7 +396,7 @@ async function handleIntelligenceChat(req, res, session = null) {
 
   const mode = body.mode || "smart";
   const history = Array.isArray(body.messages) ? body.messages : [];
-  const messages = [{ role: "system", content: SYSTEM_PROMPT }, ...history];
+  let messages = [{ role: "system", content: SYSTEM_PROMPT }, ...history];
 
   const lastUserMsg = history
     .slice()
@@ -369,6 +427,28 @@ async function handleIntelligenceChat(req, res, session = null) {
     res.write("data: [DONE]\n\n");
     res.end();
     return;
+  }
+
+  const searchQuery = extractSearchQuery(lastUserMsg ? lastUserMsg.content : "");
+  if (searchQuery) {
+    try {
+      const results = await webSearch(searchQuery);
+      const context =
+        results.length > 0
+          ? [
+              `=== Web search results for "${searchQuery}" ===`,
+              ...results.map((r, i) => `${i + 1}. ${r.title}\nURL: ${r.url}\n${r.snippet}`),
+              "",
+              "Use these results to answer the user's question. Cite URLs when helpful.",
+            ].join("\n")
+          : `No web results found for \"${searchQuery}\". Answer from general knowledge cautiously.`;
+      messages.splice(1, 0, { role: "system", content: context });
+    } catch (e) {
+      messages.splice(1, 0, {
+        role: "system",
+        content: `Web search failed for \"${searchQuery}\": ${e instanceof Error ? e.message : "unknown error"}`,
+      });
+    }
   }
 
   const backend = intelligenceBackend();
@@ -671,6 +751,11 @@ const server = http.createServer(async (req, res) => {
         }
         return sendJson(res, 500, { error: msg });
       }
+    }
+    if (pathname === "/api/search" && req.method === "GET") {
+      const q = url.searchParams.get("q") || "";
+      const results = await webSearch(q);
+      return sendJson(res, 200, { results });
     }
     if (pathname === "/api/health") {
       const backend = intelligenceBackend();
