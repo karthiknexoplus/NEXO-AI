@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { ArrowUp, FileCode2, Loader2, Menu, Square } from "lucide-react";
+import { ArrowUp, Copy, FileCode2, Loader2, Menu, MessageSquarePlus, Pencil, RotateCcw, Square } from "lucide-react";
 import clsx from "clsx";
 import {
   abortIntelligenceChat,
@@ -30,12 +30,15 @@ export function ChatArea({ modes, onOpenSidebar }: ChatAreaProps) {
     setIntelligenceMode,
     newThread,
     appendMessage,
+    setActiveThread,
     updateAssistant,
   } = useChatStore();
 
   const workspaceId = useWorkspaceId();
   const thread = threads.find((t) => t.id === activeThreadId);
   const [input, setInput] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draftContent, setDraftContent] = useState("");
   const [sending, setSending] = useState(false);
   const [streamingAssistantId, setStreamingAssistantId] = useState<string | null>(null);
   const [fileToast, setFileToast] = useState<string | null>(null);
@@ -49,6 +52,7 @@ export function ChatArea({ modes, onOpenSidebar }: ChatAreaProps) {
   const clearPendingPrompt = useUiStore((s) => s.clearPendingPrompt);
   const setOpenFilePath = useUiStore((s) => s.setOpenFilePath);
   const setCodePanelOpen = useUiStore((s) => s.setCodePanelOpen);
+  const queuePrompt = useUiStore((s) => s.queuePrompt);
 
   const activeMode =
     modes.find((m) => m.id === intelligenceMode) ?? modes[1] ?? modes[0];
@@ -184,6 +188,55 @@ export function ChatArea({ modes, onOpenSidebar }: ChatAreaProps) {
     }
   };
 
+  const copyMessage = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      window.prompt("Copy message:", text);
+    }
+  };
+
+  const startEditMessage = (msg: Message) => {
+    setEditingId(msg.id);
+    setDraftContent(msg.content);
+  };
+
+  const saveEditedMessage = () => {
+    if (editingId && activeThreadId) updateAssistant(activeThreadId, editingId, draftContent);
+    setEditingId(null);
+    setDraftContent("");
+  };
+
+  const cancelEditMessage = () => {
+    setEditingId(null);
+    setDraftContent("");
+  };
+
+  const regenerateMessage = (msgId: string) => {
+    if (!thread) return;
+    const idx = thread.messages.findIndex((m) => m.id === msgId);
+    let userText = "";
+    for (let i = idx - 1; i >= 0; i--) {
+      if (thread.messages[i].role === "user") {
+        userText = thread.messages[i].content;
+        break;
+      }
+    }
+    if (userText) queuePrompt(userText, true);
+  };
+
+  const forkFromMessage = (msgId: string) => {
+    if (!thread) return;
+    const idx = thread.messages.findIndex((m) => m.id === msgId);
+    if (idx < 0) return;
+    const slice = thread.messages.slice(0, idx + 1);
+    const id = newThread();
+    for (const m of slice) {
+      appendMessage(id, { ...m, id: `${m.id}-fork-${Date.now()}` });
+    }
+    setActiveThread(id);
+  };
+
   return (
     <main className="flex-1 flex flex-col min-w-0 nexo-glass bg-nexo-panel border border-nexo-border rounded-2xl overflow-hidden transition-colors duration-300">
       <header className="shrink-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-3 sm:px-6 py-3 sm:py-0 sm:h-14 border-b border-nexo-border">
@@ -306,7 +359,23 @@ export function ChatArea({ modes, onOpenSidebar }: ChatAreaProps) {
                       N+
                     </div>
                     <div className="prose-chat flex-1 min-w-0">
-                      {m.content ? (
+                      {editingId === m.id ? (
+                        <div className="space-y-2">
+                          <textarea
+                            value={draftContent}
+                            onChange={(e) => setDraftContent(e.target.value)}
+                            className="w-full min-h-[120px] max-h-[40vh] rounded-xl border border-nexo-border bg-nexo-composer px-3 py-2 text-[13px] font-mono focus:outline-none"
+                          />
+                          <div className="flex gap-2">
+                            <button type="button" onClick={saveEditedMessage} className="text-[11px] px-3 py-1.5 rounded-lg nexo-btn-primary">
+                              Save edit
+                            </button>
+                            <button type="button" onClick={cancelEditMessage} className="text-[11px] px-3 py-1.5 rounded-lg border border-nexo-border text-nexo-muted hover:bg-nexo-hover">
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : m.content ? (
                         <>
                           <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
                           {sending &&
@@ -318,6 +387,22 @@ export function ChatArea({ modes, onOpenSidebar }: ChatAreaProps) {
                                 {labelForPhase(generationPhase, generationDetail)}
                               </p>
                             )}
+                          {!sending || m.id !== streamingAssistantId ? (
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              <button type="button" onClick={() => void copyMessage(m.content)} className="text-[11px] flex items-center gap-1 px-2 py-1 rounded-md border border-nexo-border text-nexo-muted hover:bg-nexo-hover hover:text-nexo-fg">
+                                <Copy className="w-3 h-3" /> Copy
+                              </button>
+                              <button type="button" onClick={() => startEditMessage(m)} className="text-[11px] flex items-center gap-1 px-2 py-1 rounded-md border border-nexo-border text-nexo-muted hover:bg-nexo-hover hover:text-nexo-fg">
+                                <Pencil className="w-3 h-3" /> Edit
+                              </button>
+                              <button type="button" onClick={() => regenerateMessage(m.id)} className="text-[11px] flex items-center gap-1 px-2 py-1 rounded-md border border-nexo-border text-nexo-muted hover:bg-nexo-hover hover:text-nexo-fg">
+                                <RotateCcw className="w-3 h-3" /> Regenerate
+                              </button>
+                              <button type="button" onClick={() => forkFromMessage(m.id)} className="text-[11px] flex items-center gap-1 px-2 py-1 rounded-md border border-nexo-border text-nexo-muted hover:bg-nexo-hover hover:text-nexo-fg">
+                                <MessageSquarePlus className="w-3 h-3" /> New chat from this
+                              </button>
+                            </div>
+                          ) : null}
                         </>
                       ) : (
                         <div className="flex items-center gap-2 text-nexo-muted text-sm">

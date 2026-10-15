@@ -270,19 +270,48 @@ function customerChatError(httpStatus) {
 }
 
 function simpleGreetingReply(text) {
-  const t = (text || "").trim().toLowerCase();
-  if (!t || t.length > 90) return null;
-  if (/^(hi|hey|hello|hiya|howdy|yo|sup|greetings)([\\s!.,?]|$)/.test(t)) {
-    return "Hey! I'm NEXOPLUS — your AI coding assistant. What would you like to build or fix today?";
-  }
-  if (/^good\\s+(morning|afternoon|evening|day)([\\s!.,?]|$)/.test(t)) {
-    return "Good to see you! I'm NEXOPLUS. What can I help you build today?";
-  }
-  if (/^(how are you|how's it going|how are things)([\\s!.,?]|$)/.test(t)) {
-    return "I'm doing great, thanks! I'm NEXOPLUS — ready to help you build. What should we work on?";
-  }
-  if (/^(thanks|thank you|thx|appreciate it)([\\s!.,?]|$)/.test(t)) {
+  const raw = (text || "").trim().toLowerCase();
+  if (!raw || raw.length > 140) return null;
+
+  const greetingWords = new Set([
+    "hi", "hey", "hello", "hiya", "howdy", "yo", "sup", "greetings", "hola",
+    "heya", "hii", "heyy", "wassup", "whatsup", "whats", "good", "morning",
+    "afternoon", "evening",
+  ]);
+  const thanksWords = new Set(["thanks", "thank", "thx", "appreciate"]);
+  const conversationalWords = new Set([
+    "how", "are", "you", "doing", "today", "going", "there", "what", "up",
+    "things", "fine", "great", "man", "bro", "buddy", "dude", "friend",
+    "mate", "sir", "pal", "amigo", "team",
+  ]);
+  const fillerWords = new Set(["man", "bro", "buddy", "dude", "friend", "mate", "sir", "pal", "amigo", "team"]);
+
+  const tokens = raw.replace(/[^a-z0-9\s]/g, "").split(/\s+/).filter(Boolean);
+  if (tokens.length === 0 || tokens.length > 8) return null;
+
+  const hasGreeting = tokens.some((w) => greetingWords.has(w));
+  const hasGreetingPhrase = hasGreeting ||
+    (tokens.includes("how") && tokens.includes("you")) ||
+    (tokens.includes("what") && tokens.includes("up")) ||
+    tokens.includes("sup");
+  const hasThanks = tokens.some((w) => thanksWords.has(w));
+  const allAllowed = tokens.every(
+    (w) => greetingWords.has(w) || thanksWords.has(w) || fillerWords.has(w) || conversationalWords.has(w)
+  );
+
+  if (!allAllowed) return null;
+
+  if (hasThanks && !hasGreeting) {
     return "You're welcome! Need help with anything else in your project?";
+  }
+  if (hasGreetingPhrase) {
+    if (tokens.includes("morning") || tokens.includes("afternoon") || tokens.includes("evening")) {
+      return "Good to see you! I'm NEXOPLUS. What can I help you build today?";
+    }
+    if (tokens.some((w) => ["how", "doing", "going"].includes(w))) {
+      return "I'm doing great, thanks! I'm NEXOPLUS — ready to help you build. What should we work on?";
+    }
+    return "Hey! I'm NEXOPLUS — your AI coding assistant. What would you like to build or fix today?";
   }
   return null;
 }
@@ -345,6 +374,7 @@ async function handleIntelligenceChat(req, res, session = null) {
   const timeoutMs = getCloudTimeoutMs();
 
   let upstream;
+  try {
   if (backend !== "ollama") {
     const model = resolveCloudModel(backend, mode);
     const { url, headers, body: cloudBody } = cloudChatRequest(backend, model, messages, mode);
@@ -380,6 +410,12 @@ async function handleIntelligenceChat(req, res, session = null) {
       ? "NEXOPLUS intelligence is still loading. Please try again in a moment (first run on a small server can take 1–2 minutes)."
       : "NEXOPLUS is temporarily unavailable. Please retry shortly.";
   return sendJson(res, 503, { error: friendly });
+  } catch (e) {
+    if (!res.headersSent) {
+      return sendJson(res, 503, { error: "NEXOPLUS is temporarily unavailable. Please retry shortly." });
+    }
+    try { res.end(); } catch {}
+  }
 }
 
 function serveStatic(req, res, urlPath) {
