@@ -624,13 +624,13 @@ export function ChatArea({ modes, onOpenSidebar }: ChatAreaProps) {
               className="w-full resize-y min-h-[88px] max-h-[40vh] bg-transparent px-4 pt-4 pb-2 text-[14px] placeholder:text-nexo-muted focus:outline-none"
             />
             <div className="flex items-center justify-between px-3 pb-3">
-              <div className="flex items-center gap-2 pl-1">
+              <div className="flex items-center gap-1.5 pl-1 min-w-0">
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={sending || uploading}
                   title="Upload file to analyze/summarize"
-                  className="p-1.5 rounded-lg border border-nexo-border text-nexo-muted hover:bg-nexo-hover hover:text-nexo-fg disabled:opacity-30"
+                  className="shrink-0 p-1.5 rounded-lg border border-nexo-border text-nexo-muted hover:bg-nexo-hover hover:text-nexo-fg disabled:opacity-30"
                 >
                   {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Paperclip className="w-3.5 h-3.5" />}
                 </button>
@@ -639,13 +639,13 @@ export function ChatArea({ modes, onOpenSidebar }: ChatAreaProps) {
                   onClick={toggleVoiceInput}
                   disabled={sending || uploading}
                   title={listening ? "Stop voice input" : "Voice to text"}
-                  className={`p-1.5 rounded-lg border text-nexo-muted hover:bg-nexo-hover hover:text-nexo-fg disabled:opacity-30 ${
+                  className={`shrink-0 p-1.5 rounded-lg border text-nexo-muted hover:bg-nexo-hover hover:text-nexo-fg disabled:opacity-30 ${
                     listening ? "border-red-500/50 text-red-400" : "border-nexo-border"
                   }`}
                 >
                   {listening ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
                 </button>
-                <span className="text-[11px] text-nexo-muted">
+                <span className="hidden sm:inline text-[11px] text-nexo-muted truncate">
                   {activeMode?.label ?? "NEXOPLUS Smart"}
                 </span>
               </div>

@@ -254,7 +254,7 @@ export function CodePanel() {
         <button
           type="button"
           onClick={() => setCodePanelOpen(true)}
-          className="lg:hidden fixed bottom-[4.5rem] right-3 z-20 w-12 h-12 rounded-full nexo-btn-primary shadow-lg flex items-center justify-center"
+          className="lg:hidden fixed bottom-[6.5rem] right-3 z-20 w-11 h-11 rounded-full nexo-btn-primary shadow-lg flex items-center justify-center"
           aria-label="Open project files"
         >
           <FileCode2 className="w-5 h-5" />
