@@ -1,5 +1,6 @@
 import http from "node:http";
 import fs from "node:fs";
+import { exec } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { extractFilesFromMarkdown } from "./server/extractFiles.mjs";
@@ -759,6 +760,31 @@ const server = http.createServer(async (req, res) => {
       const q = url.searchParams.get("q") || "";
       const results = await webSearch(q);
       return sendJson(res, 200, { results });
+    }
+    if (pathname === "/api/terminal/run" && req.method === "POST") {
+      const session = getSessionFromRequest(req);
+      if (!session || !session.canManageSettings) {
+        return sendJson(res, 403, { error: "Admin only" });
+      }
+      let body = {};
+      try {
+        body = JSON.parse((await readBody(req)) || "{}");
+      } catch {
+        return sendJson(res, 400, { error: "Invalid JSON" });
+      }
+      const command = String(body.command || "").trim();
+      if (!command) return sendJson(res, 400, { error: "Missing command" });
+      const dir = projectDir(WORKSPACE_ROOT, body.projectId || "default");
+      fs.mkdirSync(dir, { recursive: true });
+      exec(command, { cwd: dir, timeout: 60000, maxBuffer: 1024 * 1024 }, (err, stdout, stderr) => {
+        return sendJson(res, 200, {
+          stdout: stdout || "",
+          stderr: stderr || "",
+          code: err ? (err.code ?? 1) : 0,
+          signal: err ? err.signal : null,
+        });
+      });
+      return;
     }
     if (pathname === "/api/health") {
       const backend = intelligenceBackend();

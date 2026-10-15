@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Editor from "@monaco-editor/react";
 import {
   Bug,
+  Eye,
   FileCode2,
   FilePlus,
   FolderUp,
@@ -27,6 +28,7 @@ import { labelForPhase } from "../lib/generationStatus";
 import { useUiStore } from "../store/uiStore";
 import { useWorkspaceId, useWorkspaceLabel } from "../hooks/useWorkspaceId";
 import { GitHubPanel } from "./GitHubPanel";
+import { TerminalPanel } from "./TerminalPanel";
 import { PromptModal } from "./PromptModal";
 import { ConfirmModal } from "./ConfirmModal";
 
@@ -130,6 +132,7 @@ export function CodePanel() {
   const [fileModalMode, setFileModalMode] = useState<"new" | "rename">("new");
   const [fileModalInitial, setFileModalInitial] = useState("");
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const newFile = () => {
     if (!workspaceId) return;
@@ -328,6 +331,15 @@ export function CodePanel() {
           </button>
           <button
             type="button"
+            disabled={!activeFile || !(activeFile.endsWith(".html") || activeFile.endsWith(".htm"))}
+            onClick={() => setPreviewOpen(true)}
+            className="p-1.5 rounded-md hover:bg-nexo-hover text-nexo-muted disabled:opacity-30"
+            title="Preview HTML"
+          >
+            <Eye className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
             disabled={!activeFile}
             onClick={renameActive}
             className="p-1.5 rounded-md hover:bg-nexo-hover text-nexo-muted disabled:opacity-30"
@@ -458,6 +470,34 @@ export function CodePanel() {
           </div>
         </div>
         <GitHubPanel workspaceId={workspaceId} />
+        <TerminalPanel workspaceId={workspaceId} />
+        {previewOpen && activeFile && (
+          <div
+            className="fixed inset-0 z-[60] flex flex-col bg-black/70 backdrop-blur-sm p-2 sm:p-4"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setPreviewOpen(false);
+            }}
+          >
+            <div className="mx-auto w-full max-w-5xl flex-1 flex flex-col rounded-2xl border border-nexo-border bg-white overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-2 border-b border-nexo-border bg-nexo-composer">
+                <span className="text-[12px] font-mono text-nexo-muted truncate">{activeFile}</span>
+                <button
+                  type="button"
+                  onClick={() => setPreviewOpen(false)}
+                  className="p-1.5 rounded-md hover:bg-nexo-hover text-nexo-muted"
+                >
+                  Close
+                </button>
+              </div>
+              <iframe
+                title="preview"
+                className="flex-1 w-full border-0"
+                sandbox="allow-scripts allow-same-origin"
+                srcDoc={content}
+              />
+            </div>
+          </div>
+        )}
         <PromptModal
           open={fileModalOpen}
           title={fileModalMode === "new" ? "New file" : "Rename file"}
