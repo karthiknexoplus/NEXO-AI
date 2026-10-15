@@ -332,21 +332,21 @@ function simpleGreetingReply(text) {
   const raw = (text || "").trim().toLowerCase();
   if (!raw || raw.length > 140) return null;
 
+  const tokens = raw.replace(/[^a-z0-9\s]/g, "").split(/\s+/).filter(Boolean);
+  if (tokens.length === 0 || tokens.length > 10) return null;
+
+  // Do not intercept genuine coding requests even if they start with a greeting.
+  if (/\b(create|build|fix|code|app|api|project|file|component|function|bug|error|feature|add|update|change|modify|delete|refactor|test|website|landing|todo|login|auth|database|deploy)\b/.test(raw)) {
+    return null;
+  }
+
   const greetingWords = new Set([
     "hi", "hey", "hello", "hiya", "howdy", "yo", "sup", "greetings", "hola",
     "heya", "hii", "heyy", "wassup", "whatsup", "whats", "good", "morning",
-    "afternoon", "evening",
+    "afternoon", "evening", "nalla", "irukiya", "irukkiya", "vanakkam",
+    "epadi", "irukkeengal", "hai", "helo", "namaste", "kaise", "helloji",
   ]);
-  const thanksWords = new Set(["thanks", "thank", "thx", "appreciate"]);
-  const conversationalWords = new Set([
-    "how", "are", "you", "doing", "today", "going", "there", "what", "up",
-    "things", "fine", "great", "man", "bro", "buddy", "dude", "friend",
-    "mate", "sir", "pal", "amigo", "team",
-  ]);
-  const fillerWords = new Set(["man", "bro", "buddy", "dude", "friend", "mate", "sir", "pal", "amigo", "team"]);
-
-  const tokens = raw.replace(/[^a-z0-9\s]/g, "").split(/\s+/).filter(Boolean);
-  if (tokens.length === 0 || tokens.length > 8) return null;
+  const thanksWords = new Set(["thanks", "thank", "thx", "appreciate", "nandri", "shukriya"]);
 
   const hasGreeting = tokens.some((w) => greetingWords.has(w));
   const hasGreetingPhrase = hasGreeting ||
@@ -354,25 +354,20 @@ function simpleGreetingReply(text) {
     (tokens.includes("what") && tokens.includes("up")) ||
     tokens.includes("sup");
   const hasThanks = tokens.some((w) => thanksWords.has(w));
-  const allAllowed = tokens.every(
-    (w) => greetingWords.has(w) || thanksWords.has(w) || fillerWords.has(w) || conversationalWords.has(w)
-  );
 
-  if (!allAllowed) return null;
+  if (!hasGreeting && !hasThanks) return null;
 
   if (hasThanks && !hasGreeting) {
-    return "You're welcome! Need help with anything else in your project?";
+    return "You're welcome! Need help with anything else?";
   }
-  if (hasGreetingPhrase) {
-    if (tokens.includes("morning") || tokens.includes("afternoon") || tokens.includes("evening")) {
-      return "Good to see you! I'm NEXOPLUS. What can I help you build today?";
-    }
-    if (tokens.some((w) => ["how", "doing", "going"].includes(w))) {
-      return "I'm doing great, thanks! I'm NEXOPLUS — ready to help you build. What should we work on?";
-    }
-    return "Hey! I'm NEXOPLUS — your AI coding assistant. What would you like to build or fix today?";
+  if (tokens.includes("morning") || tokens.includes("afternoon") || tokens.includes("evening")) {
+    return "Good to see you! I'm NEXOPLUS — what can I build for you?";
   }
-  return null;
+  if (tokens.some((w) => ["how", "doing", "going"].includes(w))) {
+    return "I'm doing great! I'm NEXOPLUS — ready to help. What should we build?";
+  }
+  // Crisp default reply; works across languages.
+  return "Hey! I'm NEXOPLUS — what would you like to build or fix today?";
 }
 
 async function handleIntelligenceChat(req, res, session = null) {
